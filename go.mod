@@ -1,4 +1,4 @@
-module github.com/Arian94/backend-resort
+module Resort
 
 go 1.16
 

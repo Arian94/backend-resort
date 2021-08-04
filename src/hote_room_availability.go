@@ -1,4 +1,4 @@
-package main
+package hotel
 
 import (
 	"database/sql"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-sql-driver/mysql"
 )
 
 type HotelReservation struct {
@@ -67,8 +68,16 @@ var roomTypeCapacity = map[string]byte{
 	// SUM 11
 }
 
-func checkRoomAvailability(c *gin.Context) {
+var db *sql.DB
+
+func CheckRoomAvailability(c *gin.Context) {
+	runDatabase()
+
+	defer db.Close()
+
 	var clientRequest ClientRequest
+
+	// defer db.Close()
 
 	// Call BindJSON to bind the received JSON to
 	if err := c.BindJSON(&clientRequest); err != nil {
@@ -90,7 +99,7 @@ func checkRoomAvailability(c *gin.Context) {
 	oneMonthLater := yesterday.AddDate(0, 0, 30)
 	if startDate.Before(yesterday) || startDate.After(oneMonthLater) || endDate.Before(yesterday) || endDate.After(oneMonthLater) ||
 		endDate.Before(startDate) {
-		log.Printf("Wrong time bound yesterday: %v \n one month later: %v \n start: %v \n end: %v",
+		log.Printf("Wrong time bound \n yesterday: %v \n one month later: %v \n start: %v \n end: %v",
 			yesterday, oneMonthLater, startDate, endDate)
 		c.JSON(http.StatusBadRequest, nil)
 		return
@@ -181,4 +190,28 @@ func findRoomIfAvailable(reservedRows *[]AllReservedData, clientRequest *ClientR
 	} else {
 		return false
 	}
+}
+
+func runDatabase() {
+	// Capture connection properties.
+	cfg := mysql.Config{
+		User:   "arian",
+		Passwd: "123",
+		Net:    "tcp",
+		Addr:   "127.0.0.1:3306",
+		DBName: "resort",
+	}
+
+	// Get a database handle.
+	var err error
+	db, err = sql.Open("mysql", cfg.FormatDSN())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	pingErr := db.Ping()
+	if pingErr != nil {
+		log.Fatal(pingErr)
+	}
+	log.Println("Connected!")
 }
