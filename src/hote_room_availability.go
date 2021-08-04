@@ -95,12 +95,13 @@ func CheckRoomAvailability(c *gin.Context) {
 		return
 	}
 
-	yesterday := time.Now().AddDate(0, 0, -1).UTC()
-	oneMonthLater := yesterday.AddDate(0, 0, 30)
-	if startDate.Before(yesterday) || startDate.After(oneMonthLater) || endDate.Before(yesterday) || endDate.After(oneMonthLater) ||
+	today, _ := time.Parse(format, time.Now().Format(format)) // in order to get rid of time and only use date, time.Now() is stringified and then parsed
+	oneMonthLater := today.AddDate(0, 0, 29)
+
+	if startDate.Before(today) || startDate.After(oneMonthLater) || endDate.Before(today) || endDate.After(oneMonthLater) ||
 		endDate.Before(startDate) {
-		log.Printf("Wrong time bound \n yesterday: %v \n one month later: %v \n start: %v \n end: %v",
-			yesterday, oneMonthLater, startDate, endDate)
+		log.Printf("Wrong time bound \n today: %v \n one month later: %v \n start: %v \n end: %v",
+			today, oneMonthLater, startDate, endDate)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
