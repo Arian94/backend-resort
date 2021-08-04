@@ -77,24 +77,26 @@ func checkRoomAvailability(c *gin.Context) {
 		return
 	}
 
-	startDate, startDateError := time.Parse("2006-01-02", clientRequest.StartDate)
-	endDate, endDateError := time.Parse("2006-01-02", clientRequest.EndDate)
+	format := "2006-01-02"
+	startDate, startDateError := time.Parse(format, clientRequest.StartDate)
+	endDate, endDateError := time.Parse(format, clientRequest.EndDate)
 	if startDateError != nil || endDateError != nil {
 		log.Printf("Wrong time format: %v or %v", startDate, endDate)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 
-	now := time.Now().UTC()
-	oneMonthLater := now.AddDate(0, 1, 0)
-	if startDate.Before(now) || startDate.After(oneMonthLater) || endDate.Before(now) || endDate.After(oneMonthLater) ||
+	yesterday := time.Now().AddDate(0, 0, -1).UTC()
+	oneMonthLater := yesterday.AddDate(0, 0, 30)
+	if startDate.Before(yesterday) || startDate.After(oneMonthLater) || endDate.Before(yesterday) || endDate.After(oneMonthLater) ||
 		endDate.Before(startDate) {
-		log.Println("Wrong time bound")
+		log.Printf("Wrong time bound yesterday: %v \n one month later: %v \n start: %v \n end: %v",
+			yesterday, oneMonthLater, startDate, endDate)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 
-	log.Printf("numbof rooms %v", clientRequest.NumberOfRooms)
+	log.Printf("Number of rooms: %v", clientRequest.NumberOfRooms)
 	if clientRequest.NumberOfRooms < 1 || clientRequest.NumberOfRooms > 3 {
 		c.JSON(http.StatusBadRequest, nil)
 		return
