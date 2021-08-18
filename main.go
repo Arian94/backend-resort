@@ -3,8 +3,9 @@ package main
 import (
 	"time"
 
+	runDatabases "Resort/src/database"
 	hotel "Resort/src/hotel"
-	runMysqlDatabase "Resort/src/mysql-database"
+	"Resort/src/middleware"
 	signupLogin "Resort/src/signup-login"
 
 	"github.com/gin-gonic/gin"
@@ -15,9 +16,12 @@ import (
 
 func main() {
 	// runDatabase()
-	runMysqlDatabase.RunDatabase()
+	runDatabases.RunMySql()
+	runDatabases.RunMongoDB()
 
 	router := gin.Default()
+
+	// router.Use(middleware.AuthorizeJWT())
 
 	router.Use(cors.Middleware(cors.Config{
 		Origins:         "*",
@@ -31,7 +35,7 @@ func main() {
 
 	router.POST("/signup", signupLogin.Signup)
 	router.POST("/hotelRooms", hotel.CheckRoomAvailability)
-	// router.POST("/reserveRoom", hotel.ReserveRoom)
+	router.POST("/reserveRooms", middleware.AuthorizeJWT(), hotel.CheckAndReserveRooms)
 
 	router.Run("localhost:8080")
 }

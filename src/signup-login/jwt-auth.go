@@ -1,6 +1,7 @@
 package signupLogin
 
 import (
+	"log"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -41,7 +42,7 @@ func (service *jwtServices) GenerateToken(email string) string {
 	claims := &authCustomClaims{
 		email,
 		jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 48).Unix(),
+			ExpiresAt: time.Now().Add(time.Hour * 102).Unix(),
 			Issuer:    service.issuer,
 			IssuedAt:  time.Now().Unix(),
 		},
@@ -60,9 +61,8 @@ func (service *jwtServices) ValidateToken(encodedToken string) (*jwt.Token, erro
 	return jwt.Parse(encodedToken, func(token *jwt.Token) (interface{}, error) {
 		if _, isvalid := token.Method.(*jwt.SigningMethodHMAC); !isvalid {
 			var err error
+			log.Println("invalid token:", token.Header["alg"])
 			return nil, err
-			// log.Println("invalid token:", token.Header["alg"])
-
 		}
 		return []byte(service.secretKey), nil
 	})

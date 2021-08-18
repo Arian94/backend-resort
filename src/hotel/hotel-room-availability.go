@@ -7,29 +7,28 @@ import (
 	"strings"
 	"time"
 
-	runMysqlDatabase "Resort/src/mysql-database"
+	runDatabases "Resort/src/database"
 
 	"github.com/gin-gonic/gin"
 )
 
-type HotelReservation struct {
+type NumberAndGenericSubtype struct {
 	GenericSubtype string `json:"genericSubtype"` // 3 possibilites
 	NumberOfRooms  byte   `json:"numberOfRooms"`  // 1 to 3
-	StartDate      string `json:"startDate"`
-	EndDate        string `json:"endDate"`
 }
-
+type HotelReservation struct {
+	NumberAndGenericSubtype
+	StartDate string `json:"startDate"`
+	EndDate   string `json:"endDate"`
+}
 type ClientRequest struct {
-	RoomType string `json:"roomType"` // table name
+	RoomType string `json:"roomTypeSlug"` // table name
 	HotelReservation
 }
-
-type AllReservedData struct {
-	HotelReservation
-	ID         uint16 `json:"id"`
-	Fullname   string `json:"fullname"`
-	Email      string `json:"email"`
-	RoomNumber uint8  `json:"roomNumber"`
+type httpResponse struct {
+	status  int
+	result  bool
+	message string
 }
 
 // Table names are declared below as constants to prevent SQL injection as they will be concatenated to the query.
@@ -39,11 +38,10 @@ const (
 	TRIPLE_ROOM = "triple_room"
 	TWIN_ROOM   = "twin_room"
 )
-
 const (
-	SUBTYPE_STANDARD      = "standard"
-	SUBTYPE_STANDARD_PLUS = "standard_plus"
-	SUBTYPE_DELUXE        = "deluxe"
+	SUBTYPE_STANDARD      = "Standard"
+	SUBTYPE_STANDARD_PLUS = "Standard_plus"
+	SUBTYPE_DELUXE        = "Deluxe"
 )
 
 // Rooms Capacity
@@ -69,13 +67,7 @@ var roomTypeCapacity = map[string]byte{
 	// SUM 11
 }
 
-// var db *sql.DB
-
 func CheckRoomAvailability(c *gin.Context) {
-	db := runMysqlDatabase.Db
-
-	// defer db.Close()
-
 	var clientRequest ClientRequest
 
 	// Call BindJSON to bind the received JSON to
@@ -85,95 +77,89 @@ func CheckRoomAvailability(c *gin.Context) {
 		return
 	}
 
+	db := runDatabases.MysqlDb
+	response, _ := checkRoom(&clientRequest, db)
+	c.JSON(response.status, gin.H{"response": response.result})
+}
+
+func checkRoom(clientRequest *ClientRequest, db *sql.DB) (httpResponse, error) {
 	format := "2006-01-02"
 	startDate, startDateError := time.Parse(format, clientRequest.StartDate)
 	endDate, endDateError := time.Parse(format, clientRequest.EndDate)
 	if startDateError != nil || endDateError != nil {
 		log.Printf("Wrong time format: %v or %v", startDate, endDate)
-		c.JSON(http.StatusBadRequest, nil)
-		return
+		return httpResponse{status: http.StatusBadRequest}, gin.Error{}
 	}
 
 	today, _ := time.Parse(format, time.Now().Format(format)) // in order to get rid of time and only use date, time.Now() is stringified and then parsed
 	oneMonthLater := today.AddDate(0, 0, 29)
 
-	if startDate.Before(today) || startDate.After(oneMonthLater) || endDate.Before(today) || endDate.After(oneMonthLater) ||
-		endDate.Before(startDate) {
+	x := startDate.Before(today) || startDate.After(oneMonthLater) || endDate.Before(today) || endDate.After(oneMonthLater) ||
+		endDate.Before(startDate)
+	if x {
 		log.Printf("Wrong time bound \n today: %v \n one month later: %v \n start: %v \n end: %v",
 			today, oneMonthLater, startDate, endDate)
-		c.JSON(http.StatusBadRequest, nil)
-		return
+		return httpResponse{status: http.StatusBadRequest}, gin.Error{}
 	}
 
 	log.Printf("Number of rooms: %v", clientRequest.NumberOfRooms)
 	if clientRequest.NumberOfRooms < 1 || clientRequest.NumberOfRooms > 3 {
-		c.JSON(http.StatusBadRequest, nil)
-		return
+		return httpResponse{status: http.StatusBadRequest}, gin.Error{}
 	}
 
-	requestedTableName := strings.ToLower(strings.Split(clientRequest.RoomType, " ")[0]) + "_room" // example: "Single Room" will become "single_room"
-	requestedSubtype := strings.ToLower(clientRequest.GenericSubtype)
+	requestedTableName := clientRequest.RoomType // example: "single_room"
+	requestedGenericSubtype := clientRequest.GenericSubtype
 
 	var rows *sql.Rows
-	var err error
 
 	x0 := requestedTableName == SINGLE_ROOM || requestedTableName == DOUBLE_ROOM || requestedTableName == TRIPLE_ROOM || requestedTableName == TWIN_ROOM
-	x1 := requestedSubtype == SUBTYPE_STANDARD || requestedSubtype == SUBTYPE_STANDARD_PLUS || requestedSubtype == SUBTYPE_DELUXE
+	x1 := requestedGenericSubtype == SUBTYPE_STANDARD || requestedGenericSubtype == SUBTYPE_STANDARD_PLUS || requestedGenericSubtype == SUBTYPE_DELUXE
 	if x0 && x1 {
-		query := "SELECT * FROM " + requestedTableName
+		var err error
+		query := "SELECT room_subtype, number_of_rooms FROM " + requestedTableName
 		rows, err = db.Query(query+" WHERE ((start_date BETWEEN ? AND ?) OR (end_date BETWEEN ? AND ?)) AND room_subtype = ?",
 			clientRequest.StartDate, clientRequest.EndDate, clientRequest.StartDate, clientRequest.EndDate, clientRequest.GenericSubtype)
 		if err != nil {
 			log.Printf("Database error: %v", err)
-			c.JSON(http.StatusInternalServerError, nil)
-			return
+			// context.JSON(http.StatusInternalServerError, nil)
+			return httpResponse{status: http.StatusInternalServerError}, err
 		}
 	} else {
 		log.Printf("Wrong table name or room subtype: %v, %v", requestedTableName, clientRequest.GenericSubtype)
-		c.JSON(http.StatusBadRequest, gin.H{"response:": "Invalid input."})
-		return
+		return httpResponse{status: http.StatusBadRequest, message: "Invalid input."}, gin.Error{}
 	}
 
 	defer rows.Close()
 	// Loop through rows, using Scan to assign column data to struct fields.
-	var reservedRows []AllReservedData
+	var reservedRows []NumberAndGenericSubtype
 	for rows.Next() {
-		var reservedRow AllReservedData
+		var reservedRow NumberAndGenericSubtype
 		if err := rows.Scan(
-			&reservedRow.ID,
-			&reservedRow.RoomNumber,
-			&reservedRow.NumberOfRooms,
 			&reservedRow.GenericSubtype,
-			&reservedRow.Fullname,
-			&reservedRow.Email,
-			&reservedRow.StartDate,
-			&reservedRow.EndDate,
+			&reservedRow.NumberOfRooms,
 		); err != nil {
 			log.Printf("Row Scanning error: %v", err)
-			c.JSON(http.StatusBadGateway, nil)
-			return
+			return httpResponse{status: http.StatusBadGateway}, err
 		}
 		reservedRows = append(reservedRows, reservedRow)
 	}
 
 	if err := rows.Err(); err != nil {
 		log.Printf("Error on closing rows: %v", err)
-		c.JSON(http.StatusConflict, nil)
-		return
+		return httpResponse{status: http.StatusConflict}, err
 	}
 
 	if reservedRows == nil {
 		log.Printf("No occupied room, name: %v, cap: %v", clientRequest.RoomType, clientRequest.GenericSubtype)
-		c.JSON(http.StatusOK, gin.H{"response": true}) // true means there is/are available room(s)
-		return
+		return httpResponse{status: http.StatusOK, result: true}, nil // true means there is/are available room(s)
 	} else {
 		log.Printf("All occupied rooms, rows: %v", reservedRows)
-		isFound := findRoomIfAvailable(&reservedRows, &clientRequest, &requestedTableName)
-		c.JSON(http.StatusOK, gin.H{"response": isFound}) // false means there is/are NOT available room(s)
+		isFound := findRoomIfAvailable(&reservedRows, clientRequest, &requestedTableName)
+		return httpResponse{status: http.StatusOK, result: isFound}, nil // false means there is/are NOT available room(s)
 	}
 }
 
-func findRoomIfAvailable(reservedRows *[]AllReservedData, clientRequest *ClientRequest, requestedTableName *string) bool {
+func findRoomIfAvailable(reservedRows *[]NumberAndGenericSubtype, clientRequest *ClientRequest, requestedTableName *string) bool {
 	var numberOfOccupiedRooms byte = 0
 
 	roomSubtypeKey := "MAX_" + strings.ToUpper(*requestedTableName) + "_" + strings.ToUpper(clientRequest.GenericSubtype)
@@ -186,9 +172,10 @@ func findRoomIfAvailable(reservedRows *[]AllReservedData, clientRequest *ClientR
 	}
 	log.Println("Database sum of occupied rooms:", numberOfOccupiedRooms)
 
-	if maximumRoomCapacity-numberOfOccupiedRooms >= clientRequest.NumberOfRooms {
+	if (maximumRoomCapacity - numberOfOccupiedRooms) >= clientRequest.NumberOfRooms {
 		return true
 	} else {
+		log.Println("Fully booked")
 		return false
 	}
 }

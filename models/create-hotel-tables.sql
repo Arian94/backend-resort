@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS twin_room;
 
 CREATE TABLE single_room (
     id INT(3) AUTO_INCREMENT NOT NULL PRIMARY KEY,
-    room_number INT(3) NOT NULL CHECK (room_number BETWEEN 101 AND 111),
+    room_number INT(3) CHECK (room_number BETWEEN 101 AND 111),
 
     number_of_rooms INT NOT NULL CHECK (number_of_rooms BETWEEN 1 AND 3),
 
@@ -17,9 +17,9 @@ CREATE TABLE single_room (
 );
 INSERT INTO single_room (room_number, number_of_rooms, room_subtype, fullname, email, start_date, end_date)
 VALUES
-	(101, 1, 'standard', 'John Coltrane', 'j@y.com', '2021-07-27', '2021-07-29'),
-    (101, 1, 'standard', 'Arian Pourarian', 'a@g.com', '2021-08-10', '2021-08-14'),
-    (104, 2, 'standard_plus', 'Scott Hamshire', 's@h.com', '2021-08-13', '2021-08-19');
+	(101, 1, 'Standard', 'John Coltrane', 'j@y.com', '2021-07-27', '2021-07-29'),
+    (101, 1, 'Standard', 'Arian Pourarian', 'a@g.com', '2021-08-10', '2021-08-14'),
+    (104, 2, 'Standard_plus', 'Scott Hamshire', 's@h.com', '2021-08-13', '2021-08-19');
 
 -- -------------------------------------------------------------------------------------------------------
 -- -------------------------------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ VALUES
 
 CREATE TABLE double_room (
     id INT(3) AUTO_INCREMENT NOT NULL PRIMARY KEY,
-    room_number INT(3) NOT NULL CHECK (room_number BETWEEN 112 AND 121),
+    room_number INT(3) CHECK (room_number BETWEEN 112 AND 121),
 
 	number_of_rooms INT NOT NULL CHECK (number_of_rooms BETWEEN 1 AND 3),
     
@@ -41,9 +41,9 @@ CREATE TABLE double_room (
 );
 INSERT INTO double_room (room_number, number_of_rooms, room_subtype, fullname, email, start_date, end_date)
 VALUES
-	(111, 1, 'standard', 'Daniel Welbeck', 'j@y.com', '2021-08-05', '2021-08-13'),
-    (112, 1, 'standard', 'Parsa Jalili', 'a@g.com', '2021-08-10', '2021-08-14'),
-    (115, 2, 'standard_plus', 'Cathrine Willshere', 's@h.com', '2021-08-13', '2021-08-19');
+	(113, 1, 'Standard', 'Daniel Welbeck', 'j@y.com', '2021-08-05', '2021-08-13'),
+    (112, 1, 'Standard', 'Parsa Jalili', 'a@g.com', '2021-08-10', '2021-08-14'),
+    (115, 2, 'Standard_plus', 'Cathrine Willshere', 's@h.com', '2021-08-13', '2021-08-19');
 
 -- -------------------------------------------------------------------------------------------------------
 -- -------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ VALUES
 
 CREATE TABLE triple_room (
     id INT(3) AUTO_INCREMENT NOT NULL PRIMARY KEY,
-    room_number INT(3) NOT NULL CHECK (room_number BETWEEN 122 AND 131),
+    room_number INT(3) CHECK (room_number BETWEEN 122 AND 131),
 
 	number_of_rooms INT NOT NULL CHECK (number_of_rooms BETWEEN 1 AND 3),
     
@@ -65,9 +65,9 @@ CREATE TABLE triple_room (
 );
 INSERT INTO triple_room (room_number, number_of_rooms, room_subtype, fullname, email, start_date, end_date)
 VALUES
-	(123, 1, 'standard', 'Adam Cole', 'j@y.com', '2021-08-05', '2021-08-13'),
-    (124, 1, 'deluxe', 'John Smith', 'a@g.com', '2021-08-10', '2021-08-14'),
-    (129, 2, 'standard_plus', 'Paravane Zibarooy', 's@h.com', '2021-08-13', '2021-08-19');
+	(123, 1, 'Standard', 'Adam Cole', 'j@y.com', '2021-08-05', '2021-08-13'),
+    (124, 1, 'Deluxe', 'John Smith', 'a@g.com', '2021-08-10', '2021-08-14'),
+    (129, 2, 'Standard_plus', 'Paravane Zibarooy', 's@h.com', '2021-08-13', '2021-08-19');
 
 -- -------------------------------------------------------------------------------------------------------
 -- -------------------------------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ VALUES
 
 CREATE TABLE twin_room (
     id INT(3) AUTO_INCREMENT NOT NULL PRIMARY KEY,
-    room_number INT(3) NOT NULL CHECK (room_number BETWEEN 132 AND 142),
+    room_number INT(3) CHECK (room_number BETWEEN 132 AND 142),
 
 	number_of_rooms INT NOT NULL CHECK (number_of_rooms BETWEEN 1 AND 3),
     

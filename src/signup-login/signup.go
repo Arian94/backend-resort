@@ -1,86 +1,71 @@
 package signupLogin
 
 import (
-	runMysqlDatabase "Resort/src/mysql-database"
+	runDatabases "Resort/src/database"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 type UserInfo struct {
-	Firstname   string `json:"firstname"`
-	Lastname    string `json:"lastname"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	PhoneNumber string `json:"phoneNumber"`
+	Firstname   string `json:"firstname" validate:"required"`
+	Lastname    string `json:"lastname" validate:"required"`
+	Email       string `json:"email" validate:"email,required"`
+	Password    string `json:"password" validate:"required"`
+	PhoneNumber string `json:"phoneNumber" validate:"required"`
 }
 
 func Signup(c *gin.Context) {
-	db := runMysqlDatabase.Db
-	var userInfo UserInfo
+	db := runDatabases.MongoDb
+	ctx := *runDatabases.MongoCtxPtr
 
-	// Call BindJSON to bind the received JSON to
+	var userInfo *UserInfo
+
+	// Call BindJSON to bind the received JSON/BSON to struct
 	if err := c.BindJSON(&userInfo); err != nil {
 		log.Printf("Cannot be bound: %v", err)
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 
-	rows, err := db.Query("SELECT email FROM users WHERE email = ?", userInfo.Email)
-	if err != nil {
-		log.Printf("Database error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"response:": "Invalid input."})
+	validate := validator.New()
+	if err := validate.Struct(*userInfo); err != nil {
+		log.Printf("Validataion error: %v", err)
+		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
 
-	defer rows.Close()
-	// Loop through rows, using Scan to assign column data to struct fields.
-	var userDatabaseInfo UserInfo
-	for rows.Next() {
-		// var reservedRow AllReservedData
-		if err := rows.Scan(
-			// &userDatabaseInfo.Firstname,
-			// &userDatabaseInfo.Lastname,
-			&userDatabaseInfo.Email,
-			// &userDatabaseInfo.Password,
-			// &userDatabaseInfo.PhoneNumber,
-		); err != nil {
-			log.Printf("Row Scanning error: %v", err)
-			c.JSON(http.StatusBadGateway, nil)
+	collection := db.Database("resort").Collection("users")
+	if singleResult := collection.FindOne(ctx, bson.M{"email": userInfo.Email}); singleResult.Err() != nil { // means nothing found
+		if addUserError := addUserToDatabase(userInfo, collection); addUserError != nil {
+			log.Printf("Insert to database error: %v", addUserError)
+			c.JSON(http.StatusInternalServerError, nil)
 			return
 		}
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Printf("Error on closing rows: %v", err)
-		c.JSON(http.StatusConflict, nil)
+	} else {
+		log.Printf("Email already registered. %v", singleResult.Err())
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{"response": "Email already registered"})
 		return
 	}
 
-	if userDatabaseInfo.Email != "" {
-		log.Printf("Email already registered")
-		c.JSON(http.StatusBadRequest, gin.H{"response:": "Email already registered"})
-		return
-	}
-
-	if addUserError := addUserToDatabase(&userInfo); addUserError != nil {
-		log.Printf("Insert to database error: %v", addUserError)
-		c.JSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	generatedToken := JWTAuthService().GenerateToken(userDatabaseInfo.Email)
-
+	generatedToken := JWTAuthService().GenerateToken(userInfo.Email)
 	c.JSON(http.StatusOK, generatedToken)
 }
 
-func addUserToDatabase(user *UserInfo) error {
-	db := runMysqlDatabase.Db
+func addUserToDatabase(user *UserInfo, collection *mongo.Collection) error {
+	ctx := *runDatabases.MongoCtxPtr
 
-	log.Printf(user.Email, user.Firstname)
-	_, err := db.Query(
-		"INSERT INTO users (firstname, lastname, email, password, phone_number) VALUES (?, ?, ?, ?, ?);",
-		user.Firstname, user.Lastname, user.Email, user.Password, user.PhoneNumber)
+	_, err := collection.InsertOne(ctx, bson.D{
+		{Key: "firstname", Value: user.Firstname},
+		{Key: "lastname", Value: user.Lastname},
+		{Key: "email", Value: user.Email},
+		{Key: "password", Value: user.Password},
+		{Key: "phone_number", Value: user.PhoneNumber},
+	})
+
 	return err
 }
