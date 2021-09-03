@@ -2,6 +2,7 @@ package hotel
 
 import (
 	runDatabases "Resort/src/database"
+	signupLogin "Resort/src/signup-login"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 
 	"Resort/src/middleware"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -21,6 +23,9 @@ type Fullname struct {
 }
 
 func CheckAndReserveRooms(c *gin.Context) {
+	token, _ := signupLogin.JWTAuthService().ValidateToken(c.GetHeader("Authorization")[len(middleware.BEARER_SCHEMA)+1:])
+	claims := token.Claims.(jwt.MapClaims)
+	emailFromToken := fmt.Sprintf("%v", claims["email"])
 	mysqlDb := runDatabases.MysqlDb
 
 	var clientRequests *[]ClientRequest
@@ -56,7 +61,7 @@ func CheckAndReserveRooms(c *gin.Context) {
 	}
 
 	for _, clientRequest := range *clientRequests {
-		if result, err := reserveRoom(&clientRequest, mysqlDb); err != nil {
+		if result, err := reserveRoom(&clientRequest, mysqlDb, emailFromToken); err != nil {
 			log.Println("Reserve room:", err)
 			c.JSON(result.status, gin.H{"response": result.result})
 			return
@@ -83,7 +88,6 @@ func duplicateInArray(arrayRequest *[]ClientRequest) error {
 	for i := 0; i < length; i++ {
 		roomTypeArray[i] = (*arrayRequest)[i].RoomType
 	}
-	log.Println("kalame:", arrayRequest, roomTypeArray)
 
 	for i := 0; i < length; i++ {
 		var foundroomTypeIndex int
@@ -105,26 +109,26 @@ func duplicateInArray(arrayRequest *[]ClientRequest) error {
 	return nil
 }
 
-func reserveRoom(clientRequest *ClientRequest, mysqlDb *sql.DB) (httpResponse, error) {
-	fullname, err := findUser(middleware.EmailFromToken)
+func reserveRoom(clientRequest *ClientRequest, mysqlDb *sql.DB, email string) (HttpResponse, error) {
+	fullname, err := findUser(email)
 	if err != nil {
 		log.Printf("Mongo Database error for reserving room: %v", err)
-		return httpResponse{status: http.StatusInternalServerError}, err
+		return HttpResponse{status: http.StatusInternalServerError}, err
 	}
 
 	query := "INSERT INTO " + clientRequest.RoomType
 	if _, err := mysqlDb.Query(query+" (number_of_rooms, room_subtype, fullname, email, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
-		clientRequest.NumberOfRooms, clientRequest.GenericSubtype, fullname, middleware.EmailFromToken, clientRequest.StartDate, clientRequest.EndDate); err != nil {
+		clientRequest.NumberOfRooms, clientRequest.GenericSubtype, fullname, email, clientRequest.StartDate, clientRequest.EndDate); err != nil {
 		log.Printf("Mysql Database error for reserving room: %v", err)
-		return httpResponse{status: http.StatusInternalServerError}, err
+		return HttpResponse{status: http.StatusInternalServerError}, err
 	}
 
-	if err := insertRoomsToUser(middleware.EmailFromToken, clientRequest); err != nil {
+	if err := insertRoomsToUser(email, clientRequest); err != nil {
 		log.Printf("Mongo Database insertRoomsToUser error for reserving room: %v", err)
-		return httpResponse{status: http.StatusInternalServerError}, err
+		return HttpResponse{status: http.StatusInternalServerError}, err
 	}
 
-	return httpResponse{status: http.StatusOK}, nil
+	return HttpResponse{status: http.StatusOK}, nil
 }
 
 func findUser(email string) (string, error) {

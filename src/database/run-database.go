@@ -52,7 +52,7 @@ func RunMongoDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	MongoCtx, _ := context.WithTimeout(context.Background(), 1e3*time.Second)
+	MongoCtx, _ := context.WithTimeout(context.Background(), 1e9*time.Second)
 	MongoCtxPtr = &MongoCtx
 	// cancel
 	err = MongoDb.Connect(MongoCtx)

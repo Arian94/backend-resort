@@ -9,21 +9,32 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var EmailFromToken string
+const (
+	BEARER_SCHEMA = "Bearer"
+)
 
-func AuthorizeJWT() gin.HandlerFunc {
+func AuthorizeJWT(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, "No Auth header provided")
+	}
+	tokenString := authHeader[len(BEARER_SCHEMA)+1:]
+	if tokenString == "null" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, "Token is null")
+	}
+
+	if token, err := signupLogin.JWTAuthService().ValidateToken(tokenString); err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
+	} else {
+		claims := token.Claims.(jwt.MapClaims)
+		fmt.Println(claims["email"])
+	}
+}
+
+func AuthorizeOptionalJWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		const BEARER_SCHEMA = "Bearer"
-		authHeader := c.GetHeader("Authorization")
-		tokenString := authHeader[len(BEARER_SCHEMA)+1:]
-		token, err := signupLogin.JWTAuthService().ValidateToken(tokenString)
-		if token.Valid {
-			claims := token.Claims.(jwt.MapClaims)
-			fmt.Println(claims["email"])
-			EmailFromToken = fmt.Sprintf("%v", claims["email"])
-		} else {
-			fmt.Println(err)
-			c.AbortWithStatus(http.StatusUnauthorized)
+		if authHeader := c.GetHeader("Authorization"); authHeader != "" {
+			AuthorizeJWT(c)
 		}
 	}
 }

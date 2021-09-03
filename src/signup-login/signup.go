@@ -11,19 +11,19 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type UserInfo struct {
-	Firstname   string `json:"firstname" validate:"required"`
-	Lastname    string `json:"lastname" validate:"required"`
-	Email       string `json:"email" validate:"email,required"`
-	Password    string `json:"password" validate:"required"`
-	PhoneNumber string `json:"phoneNumber" validate:"required"`
+type UserSignupInfo struct {
+	Firstname   string `json:"firstname" bson:"firstname" mapstructure:"firstname" validate:"required"`
+	Lastname    string `json:"lastname" bson:"lastname" mapstructure:"lastname" validate:"required"`
+	Email       string `json:"email" bson:"email" mapstructure:"email" validate:"email,required"`
+	Password    string `json:"password" bson:"password" mapstructure:"password" validate:"required"`
+	PhoneNumber string `json:"phoneNumber" bson:"phone_number" mapstructure:"phone_number" validate:"required"`
 }
 
 func Signup(c *gin.Context) {
 	db := runDatabases.MongoDb
 	ctx := *runDatabases.MongoCtxPtr
 
-	var userInfo *UserInfo
+	var userInfo *UserSignupInfo
 
 	// Call BindJSON to bind the received JSON/BSON to struct
 	if err := c.BindJSON(&userInfo); err != nil {
@@ -48,7 +48,7 @@ func Signup(c *gin.Context) {
 		}
 	} else {
 		log.Printf("Email already registered. %v", singleResult.Err())
-		c.AbortWithStatusJSON(http.StatusOK, gin.H{"response": "Email already registered"})
+		c.AbortWithStatusJSON(http.StatusOK, "Email already registered")
 		return
 	}
 
@@ -56,7 +56,7 @@ func Signup(c *gin.Context) {
 	c.JSON(http.StatusOK, generatedToken)
 }
 
-func addUserToDatabase(user *UserInfo, collection *mongo.Collection) error {
+func addUserToDatabase(user *UserSignupInfo, collection *mongo.Collection) error {
 	ctx := *runDatabases.MongoCtxPtr
 
 	_, err := collection.InsertOne(ctx, bson.D{

@@ -51,4 +51,4 @@ db.createCollection("users", {
     }
 });
 
-db.users.insertOne({ firstname: "arian", lastname: "pourarian", email: "ahmadgholi@gmail.com", password: "123", phone_number: "00989054778974" });
+db.users.insertOne({ firstname: "arian", lastname: "pourarian", email: "arianpourarian@gmail.com", password: "13731892", phone_number: "00989054778974" });

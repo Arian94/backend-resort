@@ -6,7 +6,9 @@ import (
 	runDatabases "Resort/src/database"
 	hotel "Resort/src/hotel"
 	"Resort/src/middleware"
+	"Resort/src/restaurant"
 	signupLogin "Resort/src/signup-login"
+	userInfo "Resort/src/user-info"
 
 	"github.com/gin-gonic/gin"
 	cors "github.com/itsjamie/gin-cors"
@@ -25,7 +27,7 @@ func main() {
 
 	router.Use(cors.Middleware(cors.Config{
 		Origins:         "*",
-		Methods:         "GET, PUT, POST, DELETE",
+		Methods:         "GET,  POST, PUT, PATCH, DELETE",
 		RequestHeaders:  "Origin, Authorization, Content-Type",
 		ExposedHeaders:  "",
 		MaxAge:          50 * time.Second,
@@ -34,32 +36,12 @@ func main() {
 	}))
 
 	router.POST("/signup", signupLogin.Signup)
+	router.POST("/login", signupLogin.Login)
+	router.GET("/userInfo", middleware.AuthorizeJWT, userInfo.GetUserInfo)
+	router.GET("/foodList", restaurant.GetFoodPrices)
+	router.POST("/orderFoods", middleware.AuthorizeOptionalJWT(), restaurant.OrderFoods)
 	router.POST("/hotelRooms", hotel.CheckRoomAvailability)
-	router.POST("/reserveRooms", middleware.AuthorizeJWT(), hotel.CheckAndReserveRooms)
+	router.PATCH("/reserveRooms", middleware.AuthorizeJWT, hotel.CheckAndReserveRooms)
 
 	router.Run("localhost:8080")
 }
-
-// func runDatabase() {
-// 	// Capture connection properties.
-// 	cfg := mysql.Config{
-// 		User:   "arian",
-// 		Passwd: "123",
-// 		Net:    "tcp",
-// 		Addr:   "127.0.0.1:3306",
-// 		DBName: "resort",
-// 	}
-
-// 	// Get a database handle.
-// 	var err error
-// 	Db, err = sql.Open("mysql", cfg.FormatDSN())
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	pingErr := Db.Ping()
-// 	if pingErr != nil {
-// 		log.Fatal(pingErr)
-// 	}
-// 	log.Println("Connected!")
-// }
