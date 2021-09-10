@@ -8,23 +8,11 @@ import (
 	"time"
 
 	runDatabases "Resort/src/database"
+	"Resort/src/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-type numberAndGenericSubtype struct {
-	GenericSubtype string `json:"genericSubtype" bson:"room_subtype" mapstructure:"room_subtype"`      // 3 possibilites
-	NumberOfRooms  byte   `json:"numberOfRooms" bson:"number_of_rooms" mapstructure:"number_of_rooms"` // 1 to 3
-}
-type HotelReservation struct {
-	numberAndGenericSubtype `mapstructure:",squash"`
-	StartDate               string `json:"startDate" bson:"start_date" mapstructure:"start_date"`
-	EndDate                 string `json:"endDate" bson:"end_date" mapstructure:"end_date"`
-}
-type ClientRequest struct {
-	RoomType         string `json:"roomTypeSlug" bson:"room_type" mapstructure:"room_type"` // table name
-	HotelReservation `mapstructure:",squash"`
-}
 type HttpResponse struct {
 	status  int
 	result  bool
@@ -68,7 +56,7 @@ var roomTypeCapacity = map[string]byte{
 }
 
 func CheckRoomAvailability(c *gin.Context) {
-	var clientRequest ClientRequest
+	var clientRequest models.ClientRequest
 
 	// Call BindJSON to bind the received JSON to
 	if err := c.BindJSON(&clientRequest); err != nil {
@@ -82,7 +70,7 @@ func CheckRoomAvailability(c *gin.Context) {
 	c.JSON(response.status, gin.H{"response": response.result})
 }
 
-func checkRoom(clientRequest *ClientRequest, db *sql.DB) (HttpResponse, error) {
+func checkRoom(clientRequest *models.ClientRequest, db *sql.DB) (HttpResponse, error) {
 	format := "2006-01-02"
 	startDate, startDateError := time.Parse(format, clientRequest.StartDate)
 	endDate, endDateError := time.Parse(format, clientRequest.EndDate)
@@ -131,9 +119,9 @@ func checkRoom(clientRequest *ClientRequest, db *sql.DB) (HttpResponse, error) {
 
 	defer rows.Close()
 	// Loop through rows, using Scan to assign column data to struct fields.
-	var reservedRows []numberAndGenericSubtype
+	var reservedRows []models.NumberAndGenericSubtype
 	for rows.Next() {
-		var reservedRow numberAndGenericSubtype
+		var reservedRow models.NumberAndGenericSubtype
 		if err := rows.Scan(
 			&reservedRow.GenericSubtype,
 			&reservedRow.NumberOfRooms,
@@ -159,7 +147,7 @@ func checkRoom(clientRequest *ClientRequest, db *sql.DB) (HttpResponse, error) {
 	}
 }
 
-func findRoomIfAvailable(reservedRows *[]numberAndGenericSubtype, clientRequest *ClientRequest, requestedTableName *string) bool {
+func findRoomIfAvailable(reservedRows *[]models.NumberAndGenericSubtype, clientRequest *models.ClientRequest, requestedTableName *string) bool {
 	var numberOfOccupiedRooms byte = 0
 
 	roomSubtypeKey := "MAX_" + strings.ToUpper(*requestedTableName) + "_" + strings.ToUpper(clientRequest.GenericSubtype)

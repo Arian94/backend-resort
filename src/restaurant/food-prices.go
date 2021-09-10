@@ -2,24 +2,16 @@ package restaurant
 
 import (
 	runDatabases "Resort/src/database"
+	"Resort/src/models"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type foodList struct {
-	Type        string `json:"type"`
-	Origin      string `json:"origin"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Image       string `json:"image"`
-	Price       uint8  `json:"price"`
-}
-
 func GetFoodPrices(c *gin.Context) {
 	db := runDatabases.MysqlDb
-	var FoodList []foodList
+	var FoodList []models.FoodList
 
 	rows, err := db.Query("SELECT name, price FROM restaurant")
 	if err != nil {
@@ -31,7 +23,7 @@ func GetFoodPrices(c *gin.Context) {
 	defer rows.Close()
 	// Loop through rows, using Scan to assign column data to struct fields.
 	for rows.Next() {
-		var foodRow foodList
+		var foodRow models.FoodList
 		if err := rows.Scan(
 			&foodRow.Name,
 			&foodRow.Price,

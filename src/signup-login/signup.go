@@ -2,6 +2,7 @@ package signupLogin
 
 import (
 	runDatabases "Resort/src/database"
+	"Resort/src/models"
 	"log"
 	"net/http"
 
@@ -11,28 +12,11 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type UserSignupInfo struct {
-	GeneralUserInfo `mapstructure:",squash"`
-	Email           string `json:"email" bson:"email" mapstructure:"email" validate:"email,required"`
-	Password        string `json:"password" bson:"password" mapstructure:"password" validate:"required"`
-}
-
-type GeneralUserInfo struct {
-	Firstname   string  `json:"firstname" bson:"firstname" mapstructure:"firstname" validate:"required"`
-	Lastname    string  `json:"lastname" bson:"lastname" mapstructure:"lastname" validate:"required"`
-	PhoneNumber string  `json:"phoneNumber" bson:"phone_number" mapstructure:"phone_number" validate:"required"`
-	Profile     Profile `json:"profile" bson:"profile" mapstructure:"profile"`
-}
-
-type Profile struct {
-	Address string `json:"address" bson:"address" mapstructure:"address"`
-}
-
 func Signup(c *gin.Context) {
 	db := runDatabases.MongoDb
 	ctx := *runDatabases.MongoCtxPtr
 
-	var userInfo *UserSignupInfo
+	var userInfo *models.UserSignupInfo
 
 	// Call BindJSON to bind the received JSON/BSON to struct
 	if err := c.BindJSON(&userInfo); err != nil {
@@ -65,16 +49,17 @@ func Signup(c *gin.Context) {
 	c.JSON(http.StatusOK, generatedToken)
 }
 
-func addUserToDatabase(user *UserSignupInfo, collection *mongo.Collection) error {
+func addUserToDatabase(user *models.UserSignupInfo, collection *mongo.Collection) error {
 	ctx := *runDatabases.MongoCtxPtr
 
-	_, err := collection.InsertOne(ctx, bson.D{
-		{Key: "firstname", Value: user.Firstname},
-		{Key: "lastname", Value: user.Lastname},
-		{Key: "email", Value: user.Email},
-		{Key: "password", Value: user.Password},
-		{Key: "phone_number", Value: user.PhoneNumber},
-	})
+	_, err := collection.InsertOne(ctx, bson.M{
+		"profile": bson.D{
+			{Key: "firstname", Value: user.Firstname},
+			{Key: "lastname", Value: user.Lastname},
+			{Key: "email", Value: user.Email},
+			{Key: "password", Value: user.Password},
+			{Key: "phone_number", Value: user.PhoneNumber},
+		}})
 
 	return err
 }

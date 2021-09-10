@@ -3,6 +3,7 @@ package restaurant
 import (
 	runDatabases "Resort/src/database"
 	"Resort/src/middleware"
+	"Resort/src/models"
 	signupLogin "Resort/src/signup-login"
 	"fmt"
 	"log"
@@ -15,27 +16,10 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type OrdersAndPrice struct {
-	Orders []struct {
-		Name          string `json:"name" bson:"name" validate:"required"`
-		NumberOfMeals byte   `json:"numberOfMeals" bson:"number_of_meals" mapstructure:"number_of_meals" validate:"required"`
-	} `json:"orders"`
-	TotalPrice int64 `json:"totalPrice"  mapstructure:"total_price" validate:"required"`
-}
-
-type foodOrder struct {
-	OrdersAndPrice
-	Customer struct {
-		FullName    string `json:"fullName" bson:"receiver" validate:"required"`
-		Address     string `json:"address" bson:"address" validate:"required"`
-		PhoneNumber string `json:"phoneNumber" bson:"phone_number" validate:"required"`
-	} `json:"customer"`
-}
-
 func OrderFoods(c *gin.Context) {
 	db := runDatabases.MongoDb
 	ctx := *runDatabases.MongoCtxPtr
-	var customerOrder *foodOrder
+	var customerOrder *models.FoodOrder
 
 	// Call BindJSON to bind the received JSON/BSON to struct
 	if err := c.BindJSON(&customerOrder); err != nil {
@@ -59,7 +43,7 @@ func OrderFoods(c *gin.Context) {
 		userCollection := db.Database("resort").Collection("users")
 		if _, err := userCollection.UpdateOne(
 			ctx,
-			bson.M{"email": emailFromToken},
+			bson.M{"profile.email": emailFromToken},
 			bson.M{"$push": bson.M{
 				"restaurant": bson.M{
 					"orders":       customerOrder.Orders,
@@ -77,14 +61,13 @@ func OrderFoods(c *gin.Context) {
 		foodOrderCollection := db.Database("resort").Collection("food_orders")
 		if _, err := foodOrderCollection.InsertOne(
 			ctx,
-			bson.M{"$push": bson.M{
+			bson.M{
 				"email":                 emailFromToken,
 				"receiver":              customerOrder.Customer.FullName,
 				"receiver_phone_number": customerOrder.Customer.PhoneNumber,
 				"orders":                customerOrder.Orders,
 				"total_price":           customerOrder.TotalPrice,
 				"ordered_date":          time.Now().Format(time.RFC3339),
-			},
 			},
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, nil)
@@ -94,13 +77,12 @@ func OrderFoods(c *gin.Context) {
 		foodOrderCollection := db.Database("resort").Collection("food_orders")
 		if _, err := foodOrderCollection.InsertOne(
 			ctx,
-			bson.M{"$push": bson.M{
+			bson.M{
 				"receiver":              customerOrder.Customer.FullName,
 				"receiver_phone_number": customerOrder.Customer.PhoneNumber,
 				"orders":                customerOrder.Orders,
 				"total_price":           customerOrder.TotalPrice,
 				"ordered_date":          time.Now().Format(time.RFC3339),
-			},
 			},
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, nil)

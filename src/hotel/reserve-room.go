@@ -2,6 +2,7 @@ package hotel
 
 import (
 	runDatabases "Resort/src/database"
+	"Resort/src/models"
 	signupLogin "Resort/src/signup-login"
 	"database/sql"
 	"errors"
@@ -17,18 +18,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type Fullname struct {
-	Firstname string `bson:"firstname"`
-	Lastname  string `bson:"lastname"`
-}
-
 func CheckAndReserveRooms(c *gin.Context) {
 	token, _ := signupLogin.JWTAuthService().ValidateToken(c.GetHeader("Authorization")[len(middleware.BEARER_SCHEMA)+1:])
 	claims := token.Claims.(jwt.MapClaims)
 	emailFromToken := fmt.Sprintf("%v", claims["email"])
 	mysqlDb := runDatabases.MysqlDb
 
-	var clientRequests *[]ClientRequest
+	var clientRequests *[]models.ClientRequest
 	// Call BindJSON to bind the received JSON to
 	if err := c.BindJSON(&clientRequests); err != nil {
 		log.Printf("CheckAndReserveRooms Cannot be bound: %v", err)
@@ -81,7 +77,7 @@ func indexOf(word string, data []string) int {
 	return -1
 }
 
-func duplicateInArray(arrayRequest *[]ClientRequest) error {
+func duplicateInArray(arrayRequest *[]models.ClientRequest) error {
 	var roomTypeArray [3]string
 	length := len(*arrayRequest)
 
@@ -109,7 +105,7 @@ func duplicateInArray(arrayRequest *[]ClientRequest) error {
 	return nil
 }
 
-func reserveRoom(clientRequest *ClientRequest, mysqlDb *sql.DB, email string) (HttpResponse, error) {
+func reserveRoom(clientRequest *models.ClientRequest, mysqlDb *sql.DB, email string) (HttpResponse, error) {
 	fullname, err := findUser(email)
 	if err != nil {
 		log.Printf("Mongo Database error for reserving room: %v", err)
@@ -136,8 +132,8 @@ func findUser(email string) (string, error) {
 	ctx := *runDatabases.MongoCtxPtr
 	collection := mongoDb.Database("resort").Collection("users")
 
-	var fullname Fullname
-	if err := collection.FindOne(ctx, bson.M{"email": email}, &options.FindOneOptions{Projection: bson.M{"firstname": 1, "lastname": 1}}).Decode(&fullname); err != nil {
+	var fullname models.Fullname
+	if err := collection.FindOne(ctx, bson.M{"profile.email": email}, &options.FindOneOptions{Projection: bson.M{"firstname": 1, "lastname": 1}}).Decode(&fullname); err != nil {
 		log.Printf("findUser Mongo Database error: %v", err)
 		return "", err
 	}
@@ -145,14 +141,14 @@ func findUser(email string) (string, error) {
 	return fmt.Sprintf("%v %v", fullname.Firstname, fullname.Lastname), nil
 }
 
-func insertRoomsToUser(email string, roomArray *ClientRequest) error {
+func insertRoomsToUser(email string, roomArray *models.ClientRequest) error {
 	mongoDb := runDatabases.MongoDb
 	ctx := *runDatabases.MongoCtxPtr
 	collection := mongoDb.Database("resort").Collection("users")
 
 	if _, err := collection.UpdateOne(
 		ctx,
-		bson.M{"email": email},
+		bson.M{"profile.email": email},
 		bson.M{"$push": bson.M{
 			"hotel": bson.D{
 				{Key: "room_number", Value: nil},
@@ -161,9 +157,7 @@ func insertRoomsToUser(email string, roomArray *ClientRequest) error {
 				{Key: "room_subtype", Value: roomArray.GenericSubtype},
 				{Key: "start_date", Value: roomArray.StartDate},
 				{Key: "end_date", Value: roomArray.EndDate},
-			},
-		},
-		},
+			}}},
 	); err != nil {
 		return err
 	}

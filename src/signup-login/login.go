@@ -2,23 +2,20 @@ package signupLogin
 
 import (
 	runDatabases "Resort/src/database"
+	"Resort/src/models"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/go-playground/validator.v9"
 )
-
-type LoginInfo struct {
-	Email    string `validate:"email,required"`
-	Password string `validate:"required"`
-}
 
 func Login(c *gin.Context) {
 	db := runDatabases.MongoDb
 	ctx := *runDatabases.MongoCtxPtr
-	var loginRequest *LoginInfo
+	var loginRequest *models.LoginInfo
 
 	// Call BindJSON to bind the received JSON/BSON to struct
 	if err := c.BindJSON(&loginRequest); err != nil {
@@ -37,13 +34,17 @@ func Login(c *gin.Context) {
 	log.Printf("Login request:\nemail: %v, password: %v", loginRequest.Email, loginRequest.Password)
 
 	collection := db.Database("resort").Collection("users")
-	var databaseLoginInfo *LoginInfo
-	if err := collection.FindOne(ctx, bson.M{"email": loginRequest.Email}).Decode(&databaseLoginInfo); err != nil { // means nothing found
+
+	var databaseLoginInfo struct {
+		Profile models.LoginInfo `bson:"profile"`
+	}
+
+	if err := collection.FindOne(ctx, bson.M{"profile.email": loginRequest.Email}, &options.FindOneOptions{Projection: bson.M{"profile.email": 1, "profile.password": 1}}).Decode(&databaseLoginInfo); err != nil { // means nothing found
 		log.Printf("Email not found: %v", err)
 		c.JSON(http.StatusBadRequest, nil)
 	} else {
-		log.Printf("User info found:\nemail: %v, password: %v", databaseLoginInfo.Email, databaseLoginInfo.Password)
-		if databaseLoginInfo.Password != loginRequest.Password {
+		log.Printf("User info found:\nemail: %v, password: %v", databaseLoginInfo.Profile.Email, databaseLoginInfo.Profile.Password)
+		if databaseLoginInfo.Profile.Password != loginRequest.Password {
 			log.Printf("Password not matched: %v", err)
 			c.JSON(http.StatusBadRequest, nil)
 			return
