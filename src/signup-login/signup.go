@@ -12,11 +12,20 @@ import (
 )
 
 type UserSignupInfo struct {
-	Firstname   string `json:"firstname" bson:"firstname" mapstructure:"firstname" validate:"required"`
-	Lastname    string `json:"lastname" bson:"lastname" mapstructure:"lastname" validate:"required"`
-	Email       string `json:"email" bson:"email" mapstructure:"email" validate:"email,required"`
-	Password    string `json:"password" bson:"password" mapstructure:"password" validate:"required"`
-	PhoneNumber string `json:"phoneNumber" bson:"phone_number" mapstructure:"phone_number" validate:"required"`
+	GeneralUserInfo `mapstructure:",squash"`
+	Email           string `json:"email" bson:"email" mapstructure:"email" validate:"email,required"`
+	Password        string `json:"password" bson:"password" mapstructure:"password" validate:"required"`
+}
+
+type GeneralUserInfo struct {
+	Firstname   string  `json:"firstname" bson:"firstname" mapstructure:"firstname" validate:"required"`
+	Lastname    string  `json:"lastname" bson:"lastname" mapstructure:"lastname" validate:"required"`
+	PhoneNumber string  `json:"phoneNumber" bson:"phone_number" mapstructure:"phone_number" validate:"required"`
+	Profile     Profile `json:"profile" bson:"profile" mapstructure:"profile"`
+}
+
+type Profile struct {
+	Address string `json:"address" bson:"address" mapstructure:"address"`
 }
 
 func Signup(c *gin.Context) {

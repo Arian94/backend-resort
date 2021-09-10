@@ -15,17 +15,21 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type foodOrder struct {
+type OrdersAndPrice struct {
 	Orders []struct {
 		Name          string `json:"name" bson:"name" validate:"required"`
-		NumberOfMeals byte   `json:"numberOfMeals" bson:"number_of_meals" validate:"required"`
+		NumberOfMeals byte   `json:"numberOfMeals" bson:"number_of_meals" mapstructure:"number_of_meals" validate:"required"`
 	} `json:"orders"`
+	TotalPrice int64 `json:"totalPrice"  mapstructure:"total_price" validate:"required"`
+}
+
+type foodOrder struct {
+	OrdersAndPrice
 	Customer struct {
-		FullName    string `json:"fullName" bson:"full_name" validate:"required"`
+		FullName    string `json:"fullName" bson:"receiver" validate:"required"`
 		Address     string `json:"address" bson:"address" validate:"required"`
 		PhoneNumber string `json:"phoneNumber" bson:"phone_number" validate:"required"`
 	} `json:"customer"`
-	TotalPrice int64 `json:"totalPrice" validate:"required"`
 }
 
 func OrderFoods(c *gin.Context) {

@@ -42,6 +42,7 @@ func main() {
 	router.POST("/orderFoods", middleware.AuthorizeOptionalJWT(), restaurant.OrderFoods)
 	router.POST("/hotelRooms", hotel.CheckRoomAvailability)
 	router.PATCH("/reserveRooms", middleware.AuthorizeJWT, hotel.CheckAndReserveRooms)
+	router.PATCH("/updateUserInfo", middleware.AuthorizeJWT, userInfo.UpdateUserInfo)
 
 	router.Run("localhost:8080")
 }
