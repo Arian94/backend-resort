@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -30,7 +31,7 @@ func GetUserInfo(c *gin.Context) {
 
 	collection := db.Database("resort").Collection("users")
 
-	if err := collection.FindOne(ctx, bson.M{"profile.email": emailFromToken}).Decode(&unstructuredUserInfo); err != nil {
+	if err := collection.FindOne(ctx, bson.M{"profile.email": emailFromToken}, &options.FindOneOptions{Projection: bson.M{"profile.password": 0}}).Decode(&unstructuredUserInfo); err != nil {
 		log.Printf("Get user info Mongo Database error: %v", err)
 		c.JSON(http.StatusBadRequest, nil)
 		return
@@ -72,10 +73,10 @@ func UpdateUserInfo(c *gin.Context) {
 		ctx,
 		bson.M{"profile.email": emailFromToken},
 		bson.M{"$set": bson.M{
-			"profile.firstname":    generalUserInfo.Firstname,
-			"profile.lastname":     generalUserInfo.Lastname,
-			"profile.phone_number": generalUserInfo.PhoneNumber,
-			"profile.address":      generalUserInfo.Address,
+			"profile.firstName":   generalUserInfo.FirstName,
+			"profile.lastName":    generalUserInfo.LastName,
+			"profile.phoneNumber": generalUserInfo.PhoneNumber,
+			"profile.address":     generalUserInfo.Address,
 		}},
 	); err != nil {
 		log.Printf("Get user info Mongo Database error: %v", err)

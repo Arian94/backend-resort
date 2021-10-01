@@ -46,10 +46,10 @@ func OrderFoods(c *gin.Context) {
 			bson.M{"profile.email": emailFromToken},
 			bson.M{"$push": bson.M{
 				"restaurant": bson.M{
-					"orders":       customerOrder.Orders,
-					"receiver":     customerOrder.Customer.FullName,
-					"total_price":  customerOrder.TotalPrice,
-					"ordered_date": time.Now().Format(time.RFC3339),
+					"orders":      customerOrder.Orders,
+					"receiver":    customerOrder.CustomerForm.FullName,
+					"totalPrice":  customerOrder.TotalPrice,
+					"orderedDate": time.Now().Format(time.RFC3339),
 				},
 			},
 			},
@@ -62,12 +62,13 @@ func OrderFoods(c *gin.Context) {
 		if _, err := foodOrderCollection.InsertOne(
 			ctx,
 			bson.M{
-				"email":                 emailFromToken,
-				"receiver":              customerOrder.Customer.FullName,
-				"receiver_phone_number": customerOrder.Customer.PhoneNumber,
-				"orders":                customerOrder.Orders,
-				"total_price":           customerOrder.TotalPrice,
-				"ordered_date":          time.Now().Format(time.RFC3339),
+				"email":               emailFromToken,
+				"receiver":            customerOrder.CustomerForm.FullName,
+				"receiverPhoneNumber": customerOrder.CustomerForm.PhoneNumber,
+				"orders":              customerOrder.Orders,
+				"totalPrice":          customerOrder.TotalPrice,
+				"address":             customerOrder.CustomerForm.Address,
+				"orderedDate":         time.Now().Format(time.RFC3339),
 			},
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, nil)
@@ -78,11 +79,12 @@ func OrderFoods(c *gin.Context) {
 		if _, err := foodOrderCollection.InsertOne(
 			ctx,
 			bson.M{
-				"receiver":              customerOrder.Customer.FullName,
-				"receiver_phone_number": customerOrder.Customer.PhoneNumber,
-				"orders":                customerOrder.Orders,
-				"total_price":           customerOrder.TotalPrice,
-				"ordered_date":          time.Now().Format(time.RFC3339),
+				"receiver":            customerOrder.CustomerForm.FullName,
+				"receiverPhoneNumber": customerOrder.CustomerForm.PhoneNumber,
+				"orders":              customerOrder.Orders,
+				"totalPrice":          customerOrder.TotalPrice,
+				"address":             customerOrder.CustomerForm.Address,
+				"orderedDate":         time.Now().Format(time.RFC3339),
 			},
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, nil)

@@ -20,7 +20,6 @@ func GetFoodPrices(c *gin.Context) {
 		return
 	}
 
-	defer rows.Close()
 	// Loop through rows, using Scan to assign column data to struct fields.
 	for rows.Next() {
 		var foodRow models.FoodList

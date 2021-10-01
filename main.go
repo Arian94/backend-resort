@@ -5,6 +5,7 @@ import (
 
 	runDatabases "Resort/src/database"
 	hotel "Resort/src/hotel"
+	"Resort/src/message_broker"
 	"Resort/src/middleware"
 	"Resort/src/restaurant"
 	signupLogin "Resort/src/signup-login"
@@ -14,12 +15,10 @@ import (
 	cors "github.com/itsjamie/gin-cors"
 )
 
-// var Db *sql.DB
-
 func main() {
-	// runDatabase()
 	runDatabases.RunMySql()
 	runDatabases.RunMongoDB()
+	message_broker.InitializeRabbitMq()
 
 	router := gin.Default()
 
@@ -39,10 +38,13 @@ func main() {
 	router.POST("/login", signupLogin.Login)
 	router.GET("/userInfo", middleware.AuthorizeJWT, userInfo.GetUserInfo)
 	router.GET("/foodList", restaurant.GetFoodPrices)
+	router.GET("/bookedRooms", hotel.ReservedRooms)
 	router.POST("/orderFoods", middleware.AuthorizeOptionalJWT(), restaurant.OrderFoods)
 	router.POST("/hotelRooms", hotel.CheckRoomAvailability)
 	router.PATCH("/reserveRooms", middleware.AuthorizeJWT, hotel.CheckAndReserveRooms)
 	router.PATCH("/updateUserInfo", middleware.AuthorizeJWT, userInfo.UpdateUserInfo)
+
+	router.GET("/bookingws", hotel.BookingsWebSocket)
 
 	router.Run("localhost:8080")
 }

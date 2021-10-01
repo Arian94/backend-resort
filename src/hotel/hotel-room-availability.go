@@ -117,7 +117,6 @@ func checkRoom(clientRequest *models.ClientRequest, db *sql.DB) (HttpResponse, e
 		return HttpResponse{status: http.StatusBadRequest, message: "Invalid input."}, gin.Error{}
 	}
 
-	defer rows.Close()
 	// Loop through rows, using Scan to assign column data to struct fields.
 	var reservedRows []models.NumberAndGenericSubtype
 	for rows.Next() {

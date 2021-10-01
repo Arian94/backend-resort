@@ -2,18 +2,21 @@ package hotel
 
 import (
 	runDatabases "Resort/src/database"
+	"Resort/src/message_broker"
+	"Resort/src/middleware"
 	"Resort/src/models"
 	signupLogin "Resort/src/signup-login"
+	"encoding/json"
+
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 
-	"Resort/src/middleware"
-
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/mapstructure"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -46,25 +49,49 @@ func CheckAndReserveRooms(c *gin.Context) {
 	}
 
 	for _, clientRequest := range *clientRequests {
-		if result, err := checkRoom(&clientRequest, mysqlDb); err != nil {
+		if response, err := checkRoom(&clientRequest, mysqlDb); err != nil {
 			log.Println("Check room:", err)
-			c.JSON(result.status, gin.H{"response": result.result})
+			c.JSON(response.status, gin.H{"response": response.result})
 			return
-		} else if !result.result {
-			c.JSON(result.status, gin.H{"response": result.result})
+		} else if !response.result {
+			c.JSON(response.status, gin.H{"response": response.result})
 			return
 		}
 	}
 
+	newBookings := map[string][]models.Bookings{}
+
 	for _, clientRequest := range *clientRequests {
-		if result, err := reserveRoom(&clientRequest, mysqlDb, emailFromToken); err != nil {
+		if response, idFullName, err := reserveRoom(&clientRequest, mysqlDb, emailFromToken); err != nil {
 			log.Println("Reserve room:", err)
-			c.JSON(result.status, gin.H{"response": result.result})
+			c.JSON(response.status, gin.H{"response": response.result})
 			return
+		} else {
+			newBookings[clientRequest.RoomType] = append(newBookings[clientRequest.RoomType], models.Bookings{
+				Id:       int16(idFullName.id),
+				FullName: idFullName.fullName,
+				RoomMark: sql.NullInt32{},
+				Email:    emailFromToken,
+				HotelReservation: models.HotelReservation{
+					NumberAndGenericSubtype: models.NumberAndGenericSubtype{
+						GenericSubtype: clientRequest.GenericSubtype,
+						NumberOfRooms:  clientRequest.NumberOfRooms,
+					},
+					StartDate: clientRequest.StartDate,
+					EndDate:   clientRequest.EndDate,
+				},
+			})
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"response": true})
+
+	if !isWebSocketClosed {
+		log.Println("conn is opened")
+		msg, _ := json.Marshal(newBookings)
+		message_broker.Producer(msg)
+	}
+
 }
 
 func indexOf(word string, data []string) int {
@@ -86,15 +113,15 @@ func duplicateInArray(arrayRequest *[]models.ClientRequest) error {
 	}
 
 	for i := 0; i < length; i++ {
-		var foundroomTypeIndex int
+		var foundRoomTypeIndex int
 		if i+1 < length {
-			foundroomTypeIndex = indexOf(roomTypeArray[i], roomTypeArray[i+1:])
-			log.Println("PEIDA:", foundroomTypeIndex)
+			foundRoomTypeIndex = indexOf(roomTypeArray[i], roomTypeArray[i+1:])
+			log.Println("PEIDA:", foundRoomTypeIndex)
 
-			if (foundroomTypeIndex != -1) && ((*arrayRequest)[i].GenericSubtype == (*arrayRequest)[foundroomTypeIndex].GenericSubtype) {
-				log.Println("akar:", (*arrayRequest)[i].GenericSubtype, (*arrayRequest)[foundroomTypeIndex].GenericSubtype)
-				x := ((*arrayRequest)[i].StartDate == (*arrayRequest)[foundroomTypeIndex].StartDate) || ((*arrayRequest)[i].EndDate == (*arrayRequest)[foundroomTypeIndex].EndDate) ||
-					((*arrayRequest)[i].StartDate == (*arrayRequest)[foundroomTypeIndex].EndDate) || ((*arrayRequest)[i].EndDate == (*arrayRequest)[foundroomTypeIndex].StartDate)
+			if (foundRoomTypeIndex != -1) && ((*arrayRequest)[i].GenericSubtype == (*arrayRequest)[foundRoomTypeIndex].GenericSubtype) {
+				log.Println("akar:", (*arrayRequest)[i].GenericSubtype, (*arrayRequest)[foundRoomTypeIndex].GenericSubtype)
+				x := ((*arrayRequest)[i].StartDate == (*arrayRequest)[foundRoomTypeIndex].StartDate) || ((*arrayRequest)[i].EndDate == (*arrayRequest)[foundRoomTypeIndex].EndDate) ||
+					((*arrayRequest)[i].StartDate == (*arrayRequest)[foundRoomTypeIndex].EndDate) || ((*arrayRequest)[i].EndDate == (*arrayRequest)[foundRoomTypeIndex].StartDate)
 				if x {
 					return errors.New("duplicate element")
 				}
@@ -105,26 +132,42 @@ func duplicateInArray(arrayRequest *[]models.ClientRequest) error {
 	return nil
 }
 
-func reserveRoom(clientRequest *models.ClientRequest, mysqlDb *sql.DB, email string) (HttpResponse, error) {
+func reserveRoom(clientRequest *models.ClientRequest, mysqlDb *sql.DB, email string) (HttpResponse, struct {
+	id       int64
+	fullName string
+}, error) {
 	fullname, err := findUser(email)
+	var id int64
+	idFullName := struct {
+		id       int64
+		fullName string
+	}{}
+
 	if err != nil {
 		log.Printf("Mongo Database error for reserving room: %v", err)
-		return HttpResponse{status: http.StatusInternalServerError}, err
+		return HttpResponse{status: http.StatusInternalServerError}, idFullName, err
 	}
 
 	query := "INSERT INTO " + clientRequest.RoomType
-	if _, err := mysqlDb.Query(query+" (number_of_rooms, room_subtype, fullname, email, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
+	if result, err := mysqlDb.Exec(query+" (number_of_rooms, room_subtype, full_name, email, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
 		clientRequest.NumberOfRooms, clientRequest.GenericSubtype, fullname, email, clientRequest.StartDate, clientRequest.EndDate); err != nil {
 		log.Printf("Mysql Database error for reserving room: %v", err)
-		return HttpResponse{status: http.StatusInternalServerError}, err
+		return HttpResponse{status: http.StatusInternalServerError}, idFullName, err
+	} else {
+		id, _ = result.LastInsertId()
 	}
 
 	if err := insertRoomsToUser(email, clientRequest); err != nil {
 		log.Printf("Mongo Database insertRoomsToUser error for reserving room: %v", err)
-		return HttpResponse{status: http.StatusInternalServerError}, err
+		return HttpResponse{status: http.StatusInternalServerError}, idFullName, err
 	}
 
-	return HttpResponse{status: http.StatusOK}, nil
+	idFullName = struct {
+		id       int64
+		fullName string
+	}{id, fullname}
+
+	return HttpResponse{status: http.StatusOK}, idFullName, nil
 }
 
 func findUser(email string) (string, error) {
@@ -132,13 +175,15 @@ func findUser(email string) (string, error) {
 	ctx := *runDatabases.MongoCtxPtr
 	collection := mongoDb.Database("resort").Collection("users")
 
-	var fullname models.Fullname
-	if err := collection.FindOne(ctx, bson.M{"profile.email": email}, &options.FindOneOptions{Projection: bson.M{"firstname": 1, "lastname": 1}}).Decode(&fullname); err != nil {
+	var fullnameBson bson.M
+	var fullname models.FullName
+	if err := collection.FindOne(ctx, bson.M{"profile.email": email}, &options.FindOneOptions{Projection: bson.M{"profile.firstName": 1, "profile.lastName": 1}}).Decode(&fullnameBson); err != nil {
 		log.Printf("findUser Mongo Database error: %v", err)
 		return "", err
 	}
+	mapstructure.Decode(fullnameBson["profile"], &fullname)
 
-	return fmt.Sprintf("%v %v", fullname.Firstname, fullname.Lastname), nil
+	return fmt.Sprintf("%v %v", fullname.FirstName, fullname.LastName), nil
 }
 
 func insertRoomsToUser(email string, roomArray *models.ClientRequest) error {
@@ -151,12 +196,12 @@ func insertRoomsToUser(email string, roomArray *models.ClientRequest) error {
 		bson.M{"profile.email": email},
 		bson.M{"$push": bson.M{
 			"hotel": bson.D{
-				{Key: "room_number", Value: nil},
-				{Key: "room_type", Value: roomArray.RoomType},
-				{Key: "number_of_rooms", Value: roomArray.NumberOfRooms},
-				{Key: "room_subtype", Value: roomArray.GenericSubtype},
-				{Key: "start_date", Value: roomArray.StartDate},
-				{Key: "end_date", Value: roomArray.EndDate},
+				{Key: "roomNumber", Value: nil},
+				{Key: "roomType", Value: roomArray.RoomType},
+				{Key: "numberOfRooms", Value: roomArray.NumberOfRooms},
+				{Key: "roomSubtype", Value: roomArray.GenericSubtype},
+				{Key: "startDate", Value: roomArray.StartDate},
+				{Key: "endDate", Value: roomArray.EndDate},
 			}}},
 	); err != nil {
 		return err

@@ -36,7 +36,7 @@ func Login(c *gin.Context) {
 	collection := db.Database("resort").Collection("users")
 
 	var databaseLoginInfo struct {
-		Profile models.LoginInfo `bson:"profile"`
+		Profile models.LoginInfo
 	}
 
 	if err := collection.FindOne(ctx, bson.M{"profile.email": loginRequest.Email}, &options.FindOneOptions{Projection: bson.M{"profile.email": 1, "profile.password": 1}}).Decode(&databaseLoginInfo); err != nil { // means nothing found

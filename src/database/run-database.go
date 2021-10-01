@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"time"
 
 	"github.com/go-sql-driver/mysql"
 
@@ -52,7 +51,7 @@ func RunMongoDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	MongoCtx, _ := context.WithTimeout(context.Background(), 1e9*time.Second)
+	MongoCtx := context.Background() //.WithTimeout(context.Background(), 1e9*time.Second)
 	MongoCtxPtr = &MongoCtx
 	// cancel
 	err = MongoDb.Connect(MongoCtx)

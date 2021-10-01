@@ -54,11 +54,11 @@ func addUserToDatabase(user *models.UserSignupInfo, collection *mongo.Collection
 
 	_, err := collection.InsertOne(ctx, bson.M{
 		"profile": bson.D{
-			{Key: "firstname", Value: user.Firstname},
-			{Key: "lastname", Value: user.Lastname},
+			{Key: "firstName", Value: user.FirstName},
+			{Key: "lastName", Value: user.LastName},
 			{Key: "email", Value: user.Email},
 			{Key: "password", Value: user.Password},
-			{Key: "phone_number", Value: user.PhoneNumber},
+			{Key: "phoneNumber", Value: user.PhoneNumber},
 		}})
 
 	return err

@@ -5,6 +5,9 @@
 *.so
 *.dylib
 
+# Directories
+/proto-buffer
+
 # Test binary, built with `go test -c`
 *.test
 

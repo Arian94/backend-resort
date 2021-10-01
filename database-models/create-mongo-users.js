@@ -9,7 +9,7 @@ db.createCollection("users", {
     validator: {
         $jsonSchema: {
             bsonType: "object",
-            required: ["firstname", "lastname", "email", "password", "phone_number"],
+            required: ["firstName", "lastName", "email", "password", "phoneNumber"],
             properties: {
                 hotel: {
                     bsonType: "array",
@@ -20,11 +20,11 @@ db.createCollection("users", {
                     description: "ordered foods"
                 },
                 profile: {
-                    firstname: {
+                    firstName: {
                         bsonType: "string",
                         description: "must be a string and is required"
                     },
-                    lastname: {
+                    lastName: {
                         bsonType: "string",
                         description: "must be a string and is required"
                     },
@@ -38,7 +38,7 @@ db.createCollection("users", {
                         bsonType: "string",
                         description: "must be a string and is required"
                     },
-                    phone_number: {
+                    phoneNumber: {
                         bsonType: "string",
                         description: "must be a string and is required"
                     },
@@ -51,4 +51,4 @@ db.createCollection("users", {
     }
 });
 
-db.users.insertOne({profile: { firstname: "arian", lastname: "pourarian", email: "arianpourarian@gmail.com", password: "13731892", phone_number: "00989054778974" }});
+db.users.insertOne({profile: { firstName: "arian", lastName: "pourarian", email: "arianpourarian@gmail.com", password: "13731892", phoneNumber: "00989054778974" }});
