@@ -68,10 +68,12 @@ func CheckAndReserveRooms(c *gin.Context) {
 			return
 		} else {
 			newBookings[clientRequest.RoomType] = append(newBookings[clientRequest.RoomType], models.Bookings{
-				Id:       int16(idFullName.id),
-				FullName: idFullName.fullName,
-				RoomMark: sql.NullInt32{},
-				Email:    emailFromToken,
+				RoomMarkStruct: models.RoomMarkStruct{
+					Id:       int16(idFullName.id),
+					FullName: idFullName.fullName,
+					RoomMark: sql.NullString{},
+					Email:    emailFromToken,
+				},
 				HotelReservation: models.HotelReservation{
 					NumberAndGenericSubtype: models.NumberAndGenericSubtype{
 						GenericSubtype: clientRequest.GenericSubtype,
@@ -196,8 +198,9 @@ func insertRoomsToUser(email string, roomArray *models.ClientRequest) error {
 		bson.M{"profile.email": email},
 		bson.M{"$push": bson.M{
 			"hotel": bson.D{
-				{Key: "roomNumber", Value: nil},
+				// {Key: "_id", Value: bson.TypeObjectID},
 				{Key: "roomType", Value: roomArray.RoomType},
+				{Key: "roomMark", Value: nil},
 				{Key: "numberOfRooms", Value: roomArray.NumberOfRooms},
 				{Key: "roomSubtype", Value: roomArray.GenericSubtype},
 				{Key: "startDate", Value: roomArray.StartDate},

@@ -43,6 +43,7 @@ func main() {
 	router.POST("/hotelRooms", hotel.CheckRoomAvailability)
 	router.PATCH("/reserveRooms", middleware.AuthorizeJWT, hotel.CheckAndReserveRooms)
 	router.PATCH("/updateUserInfo", middleware.AuthorizeJWT, userInfo.UpdateUserInfo)
+	router.PATCH("/updateRoomMark", hotel.UpdateRoomMark)
 
 	router.GET("/bookingws", hotel.BookingsWebSocket)
 

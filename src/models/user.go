@@ -79,11 +79,25 @@ type FoodList struct {
 	Price       uint8  `json:"price"`
 }
 
-type Bookings struct {
-	Id       int16  `json:"id" bson:"id" mapstructure:"id"`
+type RoomMarkStruct struct {
+	Id       int16  `json:"id" bson:"id" mapstructure:"id" validate:"required"`
 	FullName string `json:"fullName" bson:"fullName" mapstructure:"fullName"`
 	// RoomMark uint8  `json:"roomMark" bson:"roomMark" mapstructure:"roomMark"`
-	RoomMark         sql.NullInt32 `json:"roomMark" bson:"roomMark" mapstructure:"roomMark"`
-	Email            string        `json:"email" bson:"email" mapstructure:"email"`
-	HotelReservation `mapstructure:",squash"`
+	RoomMark sql.NullString `json:"roomMark" bson:"roomMark" mapstructure:"roomMark" validate:"required"`
+	Email    string         `json:"email" bson:"email" mapstructure:"email" validate:"required"`
 }
+
+type Bookings struct {
+	RoomMarkStruct   `mapstructure:",squash" validate:"required"`
+	HotelReservation `mapstructure:",squash" validate:"required"`
+}
+
+type UpdatedRoomMark struct {
+	RoomMarkStruct `mapstructure:",squash" validate:"required"`
+	ClientRequest  `mapstructure:",squash" validate:"required"`
+}
+
+// id
+// roomType
+// roomMark
+// email

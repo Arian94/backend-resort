@@ -51,4 +51,5 @@ db.createCollection("users", {
     }
 });
 
-db.users.insertOne({profile: { firstName: "arian", lastName: "pourarian", email: "arianpourarian@gmail.com", password: "13731892", phoneNumber: "00989054778974" }});
+db.users.insertOne({profile: { firstName: "arian", lastName: "pourarian", email: "a.pourarian@gm.com", password: "13731892", phoneNumber: "00989054778974" }});
+db.users.insertOne({profile: { firstName: "sahel", lastName: "shamsi", email: "s.shamsi@yh.com", password: "12345678", phoneNumber: "00989356231225" }});

@@ -47,12 +47,14 @@ func ReservedRooms(c *gin.Context) {
 
 		s := reflect.ValueOf(&row).Elem()
 		columns := make([]interface{}, columnLength)
+
+		roomMarkStruct := reflect.ValueOf(s.Field(0).Addr().Interface()).Elem()
 		for i := 0; i < columnLength-4; i++ {
-			field := s.Field(i)
+			field := roomMarkStruct.Field(i)
 			columns[i] = field.Addr().Interface() // 0, 1, 2, 3
 		}
 
-		hotelResStruct := reflect.ValueOf(s.Field(4).Addr().Interface()).Elem()
+		hotelResStruct := reflect.ValueOf(s.Field(1).Addr().Interface()).Elem()
 		columns[6] = hotelResStruct.Field(1).Addr().Interface()
 		columns[7] = hotelResStruct.Field(2).Addr().Interface()
 		numberAndGenericSubtypeStruct := reflect.ValueOf(hotelResStruct.Field(0).Addr().Interface()).Elem()
