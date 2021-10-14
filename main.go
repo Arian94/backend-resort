@@ -45,6 +45,7 @@ func main() {
 	router.PATCH("/reserveRooms", middleware.AuthorizeJWT, hotel.CheckAndReserveRooms)
 	router.PATCH("/updateUserInfo", middleware.AuthorizeJWT, userInfo.UpdateUserInfo)
 	router.PATCH("/updateRoomMark", hotel.UpdateRoomMark)
+	router.PATCH("/updateFoodOrderState", restaurant.UpdateFoodOrderState)
 
 	router.GET("/bookingws", hotel.BookingsWebSocket)
 

@@ -80,9 +80,8 @@ type FoodList struct {
 }
 
 type RoomMarkStruct struct {
-	Id       int16  `json:"id" bson:"id" mapstructure:"id" validate:"required"`
-	FullName string `json:"fullName" bson:"fullName" mapstructure:"fullName"`
-	// RoomMark uint8  `json:"roomMark" bson:"roomMark" mapstructure:"roomMark"`
+	Id       int16          `json:"id" bson:"id" mapstructure:"id" validate:"required"`
+	FullName string         `json:"fullName" bson:"fullName" mapstructure:"fullName"`
 	RoomMark sql.NullString `json:"roomMark" bson:"roomMark" mapstructure:"roomMark" validate:"required"`
 	Email    string         `json:"email" bson:"email" mapstructure:"email" validate:"required"`
 }
@@ -97,7 +96,9 @@ type UpdatedRoomMark struct {
 	ClientRequest  `mapstructure:",squash" validate:"required"`
 }
 
-// id
-// roomType
-// roomMark
-// email
+type UpdateFoodOrder struct {
+	Id         string `json:"id" bson:"_id" mapstructure:"id" validate:"required"`
+	Email      string `json:"email" bson:"email" mapstructure:"email" validate:"required"`
+	OrderDate  string `json:"orderDate" bson:"orderDate" mapstructure:"orderDate" validate:"required"`
+	OrderState string `json:"orderState" bson:"orderState" mapstructure:"orderState" validate:"required"`
+}
