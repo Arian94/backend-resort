@@ -39,6 +39,7 @@ func main() {
 	router.GET("/userInfo", middleware.AuthorizeJWT, userInfo.GetUserInfo)
 	router.GET("/foodList", restaurant.GetFoodPrices)
 	router.GET("/bookedRooms", hotel.ReservedRooms)
+	router.GET("/customerFoodOrder", restaurant.CustomerFoodOrder)
 	router.POST("/orderFoods", middleware.AuthorizeOptionalJWT(), restaurant.OrderFoods)
 	router.POST("/hotelRooms", hotel.CheckRoomAvailability)
 	router.PATCH("/reserveRooms", middleware.AuthorizeJWT, hotel.CheckAndReserveRooms)

@@ -16,6 +16,13 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
+const (
+	RECEIVED    = "Received"
+	IN_PROGRESS = "In Progress"
+	SENT        = "Sent"
+	DELIVERED   = "Delivered"
+)
+
 func OrderFoods(c *gin.Context) {
 	db := runDatabases.MongoDb
 	ctx := *runDatabases.MongoCtxPtr
@@ -46,10 +53,11 @@ func OrderFoods(c *gin.Context) {
 			bson.M{"profile.email": emailFromToken},
 			bson.M{"$push": bson.M{
 				"restaurant": bson.M{
-					"orders":      customerOrder.Orders,
-					"receiver":    customerOrder.CustomerForm.FullName,
-					"totalPrice":  customerOrder.TotalPrice,
-					"orderedDate": time.Now().Format(time.RFC3339),
+					"orders":     customerOrder.Orders,
+					"receiver":   customerOrder.CustomerForm.FullName,
+					"totalPrice": customerOrder.TotalPrice,
+					"orderDate":  time.Now().Format(time.RFC3339),
+					"orderState": RECEIVED,
 				},
 			},
 			},
@@ -68,7 +76,8 @@ func OrderFoods(c *gin.Context) {
 				"orders":              customerOrder.Orders,
 				"totalPrice":          customerOrder.TotalPrice,
 				"address":             customerOrder.CustomerForm.Address,
-				"orderedDate":         time.Now().Format(time.RFC3339),
+				"orderDate":           time.Now().Format(time.RFC3339),
+				"orderState":          RECEIVED,
 			},
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, nil)
@@ -84,7 +93,8 @@ func OrderFoods(c *gin.Context) {
 				"orders":              customerOrder.Orders,
 				"totalPrice":          customerOrder.TotalPrice,
 				"address":             customerOrder.CustomerForm.Address,
-				"orderedDate":         time.Now().Format(time.RFC3339),
+				"orderDate":           time.Now().Format(time.RFC3339),
+				"orderState":          RECEIVED,
 			},
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, nil)
