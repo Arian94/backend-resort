@@ -48,6 +48,7 @@ func main() {
 	router.PATCH("/updateFoodOrderState", restaurant.UpdateFoodOrderState)
 
 	router.GET("/bookingws", hotel.BookingsWebSocket)
+	router.GET("/foodws", restaurant.FoodOrderWebSocket)
 
 	router.Run("localhost:8080")
 }

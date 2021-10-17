@@ -21,8 +21,9 @@ import (
 // 	batchSize     = 10000
 // )
 
-var ch *amqp.Channel
-var q amqp.Queue
+var MqChannel *amqp.Channel
+var Queue amqp.Queue
+var FoodOrderQueue amqp.Queue
 
 func FailOnError(err error, msg string) {
 	if err != nil {
@@ -35,11 +36,11 @@ func InitializeRabbitMq() {
 	FailOnError(err, "Failed to connect to RabbitMQ")
 	// defer conn.Close()
 
-	ch, err = conn.Channel()
+	MqChannel, err = conn.Channel()
 	FailOnError(err, "Failed to open a channel")
 	// defer ch.Close()
 
-	q, err = ch.QueueDeclare(
+	Queue, err = MqChannel.QueueDeclare(
 		"bookings", // name
 		false,      // durable
 		false,      // delete when unused
@@ -47,19 +48,50 @@ func InitializeRabbitMq() {
 		false,      // no-wait
 		nil,        // arguments
 	)
-	FailOnError(err, "Failed to declare a queue")
+	FailOnError(err, "Failed to declare the bookingQueue queue")
 
+	// foodOrderConn, err := amqp.Dial("amqp://guest:guest@localhost:5673/")
+	// FailOnError(err, "Failed to connect to RabbitMQ for foodOrder")
+	// // defer conn.Close()
+
+	// foodOrderChannel, err = foodOrderConn.Channel()
+	// FailOnError(err, "Failed to open a channel")
+	// defer ch.Close()
+
+	FoodOrderQueue, err = MqChannel.QueueDeclare(
+		"foodOrders", // name
+		false,        // durable
+		false,        // delete when unused
+		false,        // exclusive
+		false,        // no-wait
+		nil,          // arguments
+	)
+	FailOnError(err, "Failed to declare the foodOrderQueue queue")
 }
 
-func Producer(newBooking []byte) {
-	err := ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
+func BookingProducer(newBooking []byte) {
+	err := MqChannel.Publish(
+		"",         // exchange
+		Queue.Name, // routing key
+		false,      // mandatory
+		false,      // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        newBooking,
 		})
 	FailOnError(err, "Failed to publish a message")
+}
+
+func FoodOrderProducer(order []byte) {
+	err := MqChannel.Publish(
+		"",                  // exchange
+		FoodOrderQueue.Name, // routing key
+		false,               // mandatory
+		false,               // immediate
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        order,
+		})
+	FailOnError(err, "Failed to publish a message")
+
 }

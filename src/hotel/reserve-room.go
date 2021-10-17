@@ -88,12 +88,11 @@ func CheckAndReserveRooms(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"response": true})
 
-	if !isWebSocketClosed {
-		log.Println("conn is opened")
+	if isWebSocketOpen {
+		log.Println("New booking is sent to queue")
 		msg, _ := json.Marshal(newBookings)
-		message_broker.Producer(msg)
+		message_broker.BookingProducer(msg)
 	}
-
 }
 
 func indexOf(word string, data []string) int {

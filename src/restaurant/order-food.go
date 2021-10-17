@@ -2,9 +2,11 @@ package restaurant
 
 import (
 	runDatabases "Resort/src/database"
+	"Resort/src/message_broker"
 	"Resort/src/middleware"
 	"Resort/src/models"
 	signupLogin "Resort/src/signup-login"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -42,10 +44,13 @@ func OrderFoods(c *gin.Context) {
 		return
 	}
 
+	var emailFromToken string
+	var id interface{}
+
 	if authHeader := c.GetHeader("Authorization"); authHeader != "" {
 		token, _ := signupLogin.JWTAuthService().ValidateToken(authHeader[len(middleware.BEARER_SCHEMA)+1:])
 		claims := token.Claims.(jwt.MapClaims)
-		emailFromToken := fmt.Sprintf("%v", claims["email"])
+		emailFromToken = fmt.Sprintf("%v", claims["email"])
 
 		userCollection := db.Database("resort").Collection("users")
 		if _, err := userCollection.UpdateOne(
@@ -62,12 +67,12 @@ func OrderFoods(c *gin.Context) {
 			},
 			},
 		); err != nil {
-			c.JSON(http.StatusInternalServerError, nil)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 
 		foodOrderCollection := db.Database("resort").Collection("food_orders")
-		if _, err := foodOrderCollection.InsertOne(
+		result, err := foodOrderCollection.InsertOne(
 			ctx,
 			bson.M{
 				"email":               emailFromToken,
@@ -79,13 +84,15 @@ func OrderFoods(c *gin.Context) {
 				"orderDate":           time.Now().Format(time.RFC3339),
 				"orderState":          RECEIVED,
 			},
-		); err != nil {
-			c.JSON(http.StatusInternalServerError, nil)
+		)
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
 			return
 		}
+		id = result.InsertedID
 	} else {
 		foodOrderCollection := db.Database("resort").Collection("food_orders")
-		if _, err := foodOrderCollection.InsertOne(
+		result, err := foodOrderCollection.InsertOne(
 			ctx,
 			bson.M{
 				"receiver":            customerOrder.CustomerForm.FullName,
@@ -96,10 +103,30 @@ func OrderFoods(c *gin.Context) {
 				"orderDate":           time.Now().Format(time.RFC3339),
 				"orderState":          RECEIVED,
 			},
-		); err != nil {
-			c.JSON(http.StatusInternalServerError, nil)
+		)
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
 		}
+		id = result.InsertedID
 	}
 
-	c.JSON(http.StatusOK, nil)
+	c.Status(http.StatusOK)
+
+	if isWebSocketOpen {
+		log.Println("New food order is sent to queue")
+		foodOrder := bson.M{
+			"_id":                 id,
+			"email":               emailFromToken,
+			"receiver":            customerOrder.CustomerForm.FullName,
+			"receiverPhoneNumber": customerOrder.CustomerForm.PhoneNumber,
+			"orders":              customerOrder.Orders,
+			"totalPrice":          customerOrder.TotalPrice,
+			"address":             customerOrder.CustomerForm.Address,
+			"orderDate":           time.Now().Format(time.RFC3339),
+			"orderState":          RECEIVED,
+		}
+		msg, _ := json.Marshal(foodOrder)
+		message_broker.FoodOrderProducer(msg)
+	}
 }

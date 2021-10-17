@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/streadway/amqp"
 )
 
 var upGrader = websocket.Upgrader{
@@ -20,7 +19,7 @@ var upGrader = websocket.Upgrader{
 	},
 }
 
-var isWebSocketClosed bool = true
+var isWebSocketOpen bool = false
 
 func ReservedRooms(c *gin.Context) {
 	mysqlDb := runDatabases.MysqlDb
@@ -89,34 +88,17 @@ func BookingsWebSocket(c *gin.Context) {
 		log.Fatal(err)
 	}
 
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	message_broker.FailOnError(err, "Failed to connect to RabbitMQ")
-	// defer conn.Close()
+	isWebSocketOpen = true
+	consumerName := "bookingConsumer" + c.Request.Header.Get("Sec-Websocket-Key")
 
-	ch, err := conn.Channel()
-	message_broker.FailOnError(err, "Failed to open a channel")
-	// defer ch.Close()
-
-	isWebSocketClosed = conn.IsClosed()
-
-	q, err := ch.QueueDeclare(
-		"bookings", // name
-		false,      // durable
-		false,      // delete when unused
-		false,      // exclusive
-		false,      // no-wait
-		nil,        // arguments
-	)
-	message_broker.FailOnError(err, "Failed to declare a queue")
-
-	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+	msgs, err := message_broker.MqChannel.Consume(
+		message_broker.Queue.Name, // queue
+		consumerName,              // consumer
+		true,                      // auto-ack
+		false,                     // exclusive
+		false,                     // no-local
+		false,                     // no-wait
+		nil,                       // args
 	)
 	message_broker.FailOnError(err, "Failed to register a consumer")
 
@@ -132,15 +114,14 @@ func BookingsWebSocket(c *gin.Context) {
 	}()
 
 	go func() {
-		_, message, err := ws.ReadMessage()
+		code, message, err := ws.ReadMessage()
 		if err != nil {
 			log.Println("error read message", err)
 		}
 		log.Printf("Received a message: %s", message)
 
-		if string(message) == "closeSig" {
-			ch.Close()
-			isWebSocketClosed = true // client page is closed, no need to keep filling the queue since on returning back to the page, updated data will be requested by http protocol.
+		if code == -1 {
+			message_broker.MqChannel.Cancel(consumerName, false) // client page is closed, no need to keep filling the queue since on returning back to the page, updated data will be requested by http protocol.
 		}
 	}()
 
