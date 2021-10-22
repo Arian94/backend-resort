@@ -39,7 +39,10 @@ func Login(c *gin.Context) {
 		Profile models.LoginInfo
 	}
 
-	if err := collection.FindOne(ctx, bson.M{"profile.email": loginRequest.Email}, &options.FindOneOptions{Projection: bson.M{"profile.email": 1, "profile.password": 1}}).Decode(&databaseLoginInfo); err != nil { // means nothing found
+	if err := collection.FindOne(
+		ctx,
+		bson.M{"profile.email": loginRequest.Email}, &options.FindOneOptions{Projection: bson.M{"profile.email": 1, "profile.password": 1}},
+	).Decode(&databaseLoginInfo); err != nil { // means nothing found
 		log.Printf("Email not found: %v", err)
 		c.JSON(http.StatusBadRequest, nil)
 	} else {

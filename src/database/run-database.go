@@ -1,21 +1,21 @@
 package runDatabases
 
 import (
-	// signupLogin "Resort/src/signup-login"
 	"context"
 	"database/sql"
 	"log"
 
 	"github.com/go-sql-driver/mysql"
-
-	// "go.mongodb.org/mongo-driver/bson"
-
+	"github.com/gomodule/redigo/redis"
+	_ "github.com/lib/pq"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var MysqlDb *sql.DB
 var MongoDb *mongo.Client
+var PostgresDb *sql.DB
+var RedisDb redis.Conn
 var MongoCtxPtr *context.Context
 
 func RunMySql() {
@@ -60,4 +60,25 @@ func RunMongoDB() {
 	}
 	log.Println("Mongo connected!")
 	// defer client.Disconnect(ctx)
+}
+
+func RunPostgres() {
+	connStr := "user=postgres dbname=resort"
+	var err error
+	PostgresDb, err = sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal("Error postgres connection: ", err)
+	} else {
+		log.Println("Postgres Connected!")
+	}
+}
+
+func RunRedis() {
+	var err error
+	RedisDb, err = redis.Dial("tcp", ":6379")
+	if err != nil {
+		log.Fatal("Error postgres connection: ", err)
+	} else {
+		log.Println("Redis Connected!")
+	}
 }

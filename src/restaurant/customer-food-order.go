@@ -139,3 +139,15 @@ func UpdateFoodOrderState(c *gin.Context) {
 		}
 	}
 }
+
+func GetCourierIndex() {
+	reply, _ := runDatabases.RedisDb.Do("get", "courierIndex")
+	if reply == nil {
+		if _, err := runDatabases.RedisDb.Do("set", "courierIndex", "0"); err != nil {
+			log.Fatal("Something occured in resetting courierIndex:", err)
+		}
+		log.Println("Courier index has been set to zero.")
+	} else {
+		log.Printf("Current courier index: %s", reply)
+	}
+}

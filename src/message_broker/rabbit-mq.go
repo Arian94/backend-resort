@@ -50,14 +50,6 @@ func InitializeRabbitMq() {
 	)
 	FailOnError(err, "Failed to declare the bookingQueue queue")
 
-	// foodOrderConn, err := amqp.Dial("amqp://guest:guest@localhost:5673/")
-	// FailOnError(err, "Failed to connect to RabbitMQ for foodOrder")
-	// // defer conn.Close()
-
-	// foodOrderChannel, err = foodOrderConn.Channel()
-	// FailOnError(err, "Failed to open a channel")
-	// defer ch.Close()
-
 	FoodOrderQueue, err = MqChannel.QueueDeclare(
 		"foodOrders", // name
 		false,        // durable

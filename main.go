@@ -18,6 +18,9 @@ import (
 func main() {
 	runDatabases.RunMySql()
 	runDatabases.RunMongoDB()
+	runDatabases.RunPostgres()
+	runDatabases.RunRedis()
+	restaurant.GetCourierIndex()
 	message_broker.InitializeRabbitMq()
 
 	router := gin.Default()
