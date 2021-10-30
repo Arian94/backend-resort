@@ -6,7 +6,6 @@ import (
 	"Resort/src/middleware"
 	"Resort/src/models"
 	signupLogin "Resort/src/signup-login"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,10 +18,12 @@ import (
 )
 
 const (
-	RECEIVED    = "Received"
-	IN_PROGRESS = "In Progress"
-	SENT        = "Sent"
-	DELIVERED   = "Delivered"
+	CANCELED        = "Canceled"
+	ABSENT_CUSTOMER = "Absent Customer"
+	RECEIVED        = "Received"
+	IN_PROGRESS     = "In Progress"
+	SENT            = "Sent"
+	DELIVERED       = "Delivered"
 )
 
 func OrderFoods(c *gin.Context) {
@@ -113,20 +114,28 @@ func OrderFoods(c *gin.Context) {
 
 	c.Status(http.StatusOK)
 
-	if isWebSocketOpen {
-		log.Println("New food order is sent to queue")
-		foodOrder := bson.M{
-			"_id":                 id,
-			"email":               emailFromToken,
-			"receiver":            customerOrder.CustomerForm.FullName,
-			"receiverPhoneNumber": customerOrder.CustomerForm.PhoneNumber,
-			"orders":              customerOrder.Orders,
-			"totalPrice":          customerOrder.TotalPrice,
-			"address":             customerOrder.CustomerForm.Address,
-			"orderDate":           time.Now().Format(time.RFC3339),
-			"orderState":          RECEIVED,
-		}
-		msg, _ := json.Marshal(foodOrder)
-		message_broker.FoodOrderProducer(msg)
+	log.Println("New food order is sent to queue")
+	foodOrder := struct {
+		Id                  interface{} `json:"_id"`
+		Email               string      `json:"email"`
+		Receiver            string      `json:"receiver"`
+		ReceiverPhoneNumber string      `json:"receiverPhoneNumber"`
+		Orders              interface{} `json:"orders"`
+		TotalPrice          int64       `json:"totalPrice"`
+		Address             string      `json:"address"`
+		OrderDate           string      `json:"orderDate"`
+		OrderState          string      `json:"orderState"`
+	}{
+		id,
+		emailFromToken,
+		customerOrder.CustomerForm.FullName,
+		customerOrder.CustomerForm.PhoneNumber,
+		customerOrder.Orders,
+		customerOrder.TotalPrice,
+		customerOrder.CustomerForm.Address,
+		time.Now().Format(time.RFC3339),
+		RECEIVED,
 	}
+
+	message_broker.Producer(message_broker.FOOD_ORDER_QUEUE_NAME, foodOrder)
 }

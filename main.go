@@ -39,6 +39,7 @@ func main() {
 
 	router.POST("/signup", signupLogin.Signup)
 	router.POST("/login", signupLogin.Login)
+	router.POST("/loginCourier", signupLogin.LoginCourier)
 	router.GET("/userInfo", middleware.AuthorizeJWT, userInfo.GetUserInfo)
 	router.GET("/foodList", restaurant.GetFoodPrices)
 	router.GET("/bookedRooms", hotel.ReservedRooms)
@@ -50,8 +51,9 @@ func main() {
 	router.PATCH("/updateRoomMark", hotel.UpdateRoomMark)
 	router.PATCH("/updateFoodOrderState", restaurant.UpdateFoodOrderState)
 
-	router.GET("/bookingws", hotel.BookingsWebSocket)
-	router.GET("/foodws", restaurant.FoodOrderWebSocket)
+	router.GET("/bookingws", middleware.AuthorizeOptionalJWT(), hotel.BookingsWebSocket)
+	router.GET("/foodws", middleware.AuthorizeOptionalJWT(), restaurant.FoodOrderWebSocket)
+	router.GET("/courierws", middleware.AuthorizeOptionalJWT(), restaurant.CourierWebSocket)
 
 	router.Run("localhost:8080")
 }

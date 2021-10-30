@@ -6,7 +6,6 @@ import (
 	"Resort/src/middleware"
 	"Resort/src/models"
 	signupLogin "Resort/src/signup-login"
-	"encoding/json"
 
 	"database/sql"
 	"errors"
@@ -88,15 +87,12 @@ func CheckAndReserveRooms(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"response": true})
 
-	if isWebSocketOpen {
-		log.Println("New booking is sent to queue")
-		msg, _ := json.Marshal(newBookings)
-		message_broker.BookingProducer(msg)
-	}
+	log.Println("New booking is sent to queue")
+	message_broker.Producer(message_broker.BOOKING_QUEUE_NAME, newBookings)
 }
 
 func indexOf(word string, data []string) int {
-	log.Println("kalame:", word, data)
+	// log.Println("kalame:", word, data)
 	for k, v := range data {
 		if word == v {
 			return k + 1

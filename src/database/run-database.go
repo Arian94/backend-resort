@@ -63,7 +63,7 @@ func RunMongoDB() {
 }
 
 func RunPostgres() {
-	connStr := "user=postgres dbname=resort"
+	connStr := "user=postgres password=123 dbname=resort sslmode=disable"
 	var err error
 	PostgresDb, err = sql.Open("postgres", connStr)
 	if err != nil {

@@ -5,10 +5,12 @@ import (
 	"Resort/src/message_broker"
 	"Resort/src/models"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"reflect"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -19,7 +21,7 @@ var upGrader = websocket.Upgrader{
 	},
 }
 
-var isWebSocketOpen bool = false
+// var isWebSocketOpen bool = false
 
 func ReservedRooms(c *gin.Context) {
 	mysqlDb := runDatabases.MysqlDb
@@ -88,17 +90,32 @@ func BookingsWebSocket(c *gin.Context) {
 		log.Fatal(err)
 	}
 
-	isWebSocketOpen = true
-	consumerName := "bookingConsumer" + c.Request.Header.Get("Sec-Websocket-Key")
+	authHeader := c.GetHeader("Sec-Websocket-Protocol")
+	token, _ := jwt.Parse(authHeader, nil)
+	claims := token.Claims.(jwt.MapClaims)
+	emailFromToken := fmt.Sprintf("%v", claims["email"])
+	log.Println("Hotel Admin Email:", emailFromToken)
+
+	BookingQueue, err := message_broker.MqChannel.QueueDeclare(
+		message_broker.BOOKING_QUEUE_NAME, // name
+		false,                             // durable
+		false,                             // delete when unused
+		false,                             // exclusive
+		false,                             // no-wait
+		nil,                               // arguments
+	)
+	message_broker.FailOnError(err, "Failed to declare the bookingQueue queue")
+
+	message_broker.MqChannel.Cancel(emailFromToken, false) // for dev purposes
 
 	msgs, err := message_broker.MqChannel.Consume(
-		message_broker.Queue.Name, // queue
-		consumerName,              // consumer
-		true,                      // auto-ack
-		false,                     // exclusive
-		false,                     // no-local
-		false,                     // no-wait
-		nil,                       // args
+		BookingQueue.Name, // queue
+		emailFromToken,    // consumer
+		true,              // auto-ack
+		false,             // exclusive
+		false,             // no-local
+		false,             // no-wait
+		nil,               // args
 	)
 	message_broker.FailOnError(err, "Failed to register a consumer")
 
@@ -121,7 +138,7 @@ func BookingsWebSocket(c *gin.Context) {
 		log.Printf("Received a message: %s", message)
 
 		if code == -1 {
-			message_broker.MqChannel.Cancel(consumerName, false) // client page is closed, no need to keep filling the queue since on returning back to the page, updated data will be requested by http protocol.
+			message_broker.MqChannel.Cancel(emailFromToken, false) // client page is closed, no need to keep filling the queue since on returning back to the page, updated data will be requested by http protocol.
 		}
 	}()
 

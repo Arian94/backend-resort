@@ -98,7 +98,7 @@ type UpdatedRoomMark struct {
 
 type UpdateFoodOrder struct {
 	Id         string `json:"id" bson:"id" mapstructure:"id" validate:"required"`
-	Email      string `json:"email,omitempty" bson:"email" mapstructure:"email" validate:"required"`
+	Email      string `json:"email,omitempty" bson:"email" mapstructure:"email"`
 	OrderDate  string `json:"orderDate" bson:"orderDate" mapstructure:"orderDate" validate:"required"`
 	OrderState string `json:"orderState" bson:"orderState" mapstructure:"orderState" validate:"required"`
 }

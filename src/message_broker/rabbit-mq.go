@@ -1,6 +1,7 @@
 package message_broker
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/streadway/amqp"
@@ -21,9 +22,14 @@ import (
 // 	batchSize     = 10000
 // )
 
-var MqChannel *amqp.Channel
-var Queue amqp.Queue
-var FoodOrderQueue amqp.Queue
+var (
+	MqChannel *amqp.Channel
+)
+
+const (
+	BOOKING_QUEUE_NAME    = "bookings"
+	FOOD_ORDER_QUEUE_NAME = "foodOrders"
+)
 
 func FailOnError(err error, msg string) {
 	if err != nil {
@@ -40,50 +46,39 @@ func InitializeRabbitMq() {
 	FailOnError(err, "Failed to open a channel")
 	// defer ch.Close()
 
-	Queue, err = MqChannel.QueueDeclare(
-		"bookings", // name
-		false,      // durable
-		false,      // delete when unused
-		false,      // exclusive
-		false,      // no-wait
-		nil,        // arguments
-	)
-	FailOnError(err, "Failed to declare the bookingQueue queue")
+	// BookingQueue, err = MqChannel.QueueDeclare(
+	// 	"bookings", // name
+	// 	false,      // durable
+	// 	false,      // delete when unused
+	// 	false,      // exclusive
+	// 	false,      // no-wait
+	// 	nil,        // arguments
+	// )
+	// FailOnError(err, "Failed to declare the bookingQueue queue")
 
-	FoodOrderQueue, err = MqChannel.QueueDeclare(
-		"foodOrders", // name
-		false,        // durable
-		false,        // delete when unused
-		false,        // exclusive
-		false,        // no-wait
-		nil,          // arguments
-	)
-	FailOnError(err, "Failed to declare the foodOrderQueue queue")
+	// FoodOrderQueue, err = MqChannel.QueueDeclare(
+	// 	"foodOrders", // name
+	// 	false,        // durable
+	// 	false,        // delete when unused
+	// 	false,        // exclusive
+	// 	false,        // no-wait
+	// 	nil,          // arguments
+	// )
+	// FailOnError(err, "Failed to declare the foodOrderQueue queue")
 }
 
-func BookingProducer(newBooking []byte) {
-	err := MqChannel.Publish(
-		"",         // exchange
-		Queue.Name, // routing key
-		false,      // mandatory
-		false,      // immediate
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        newBooking,
-		})
-	FailOnError(err, "Failed to publish a message")
-}
+func Producer(queueName string, message interface{}) {
+	msg, _ := json.Marshal(message)
 
-func FoodOrderProducer(order []byte) {
 	err := MqChannel.Publish(
-		"",                  // exchange
-		FoodOrderQueue.Name, // routing key
-		false,               // mandatory
-		false,               // immediate
+		"",        // exchange
+		queueName, // routing key
+		false,     // mandatory
+		false,     // immediate
 		amqp.Publishing{
 			ContentType: "application/json",
-			Body:        order,
+			Body:        msg,
 		})
-	FailOnError(err, "Failed to publish a message")
 
+	FailOnError(err, "Failed to publish a message")
 }
